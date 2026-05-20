@@ -3,6 +3,7 @@ package mdt.cli.get;
 import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 
 import org.barfuin.texttree.api.Node;
 import org.barfuin.texttree.api.TextTree;
@@ -15,13 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
-
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 import utils.UnitUtils;
 import utils.func.Optionals;
@@ -45,6 +39,13 @@ import mdt.tree.node.DefaultNodeFactories;
 import mdt.tree.node.data.ParameterCollectionNode;
 import mdt.tree.node.info.MDTInfoNode;
 import mdt.tree.node.op.OperationEntityNode;
+
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+import picocli.CommandLine.Spec;
 
 /**
  * 지정된 MDTInstance의 MDT 모델 정보를 트리 형태로 출력하는 CLI 명령이다.
@@ -166,7 +167,10 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 			}
 		};
 		pwriter.setVerbose(m_verbose);
-		pwriter.run();
+		try {
+			pwriter.run();
+		}
+		catch ( CancellationException | InterruptedException e ) { }
 	}
 
 	private static final int MAX_TREE_DEPTH = 5;

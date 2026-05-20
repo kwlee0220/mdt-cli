@@ -3,6 +3,7 @@ package mdt.cli.list;
 import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 
 import org.eclipse.digitaltwin.aas4j.v3.model.AssetAdministrationShell;
 import org.eclipse.digitaltwin.aas4j.v3.model.AssetAdministrationShellDescriptor;
@@ -10,9 +11,6 @@ import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelDescriptor;
 import org.nocrala.tools.texttablefmt.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 
 import utils.UnitUtils;
 import utils.stream.FStream;
@@ -27,6 +25,9 @@ import mdt.model.MDTManager;
 import mdt.model.instance.MDTInstance;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.instance.MDTSubmodelDescriptor;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 /**
  *
@@ -87,7 +88,10 @@ public class ListShellCommand extends AbstractMDTCommand {
 				}
 			};
 			pwriter.setVerbose(m_verbose);
-			pwriter.run();
+			try {
+				pwriter.run();
+			}
+			catch ( CancellationException | InterruptedException e ) { }
 		}
 	}
 	

@@ -7,13 +7,11 @@ import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 
 import org.nocrala.tools.texttablefmt.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 
 import utils.UnitUtils;
 import utils.http.RESTfulIOException;
@@ -25,6 +23,9 @@ import mdt.model.MDTManager;
 import mdt.model.ResourceNotFoundException;
 import mdt.workflow.Workflow;
 import mdt.workflow.WorkflowManager;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 /**
  * 
@@ -93,7 +94,10 @@ public class ListWorkflowAllCommand extends AbstractMDTCommand {
 				}
 			};
 			pwriter.setVerbose(m_verbose);
-			pwriter.run();
+			try {
+				pwriter.run();
+			}
+			catch ( CancellationException | InterruptedException e ) { }
 		}
 	}
 	

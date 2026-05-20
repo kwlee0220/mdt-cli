@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.barfuin.texttree.api.TextTree;
@@ -19,9 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
-
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 
 import utils.InternalException;
 import utils.StopWatch;
@@ -44,6 +42,9 @@ import mdt.model.ResourceNotFoundException;
 import mdt.model.instance.InstanceDescriptor;
 import mdt.model.instance.MDTInstance;
 import mdt.model.instance.MDTInstanceStatus;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 /**
  * 등록된 MDT 인스턴스 전체를 다양한 형식으로 나열하는 CLI 명령({@code instances}).
@@ -190,7 +191,10 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 				}
 			};
 			pwriter.setVerbose(m_verbose);
-			pwriter.run();
+			try {
+				pwriter.run();
+			}
+			catch ( CancellationException | InterruptedException e ) { }
 		}
 	}
 

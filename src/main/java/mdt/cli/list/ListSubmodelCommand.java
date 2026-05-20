@@ -3,14 +3,12 @@ package mdt.cli.list;
 import java.io.PrintWriter;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelDescriptor;
 import org.nocrala.tools.texttablefmt.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 
 import utils.InternalException;
 import utils.UnitUtils;
@@ -30,6 +28,9 @@ import mdt.model.sm.data.Data;
 import mdt.model.sm.info.InformationModel;
 import mdt.model.sm.simulation.Simulation;
 import mdt.model.timeseries.TimeSeries;
+
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 /**
  *
@@ -90,7 +91,10 @@ public class ListSubmodelCommand extends AbstractMDTCommand {
 				}
 			};
 			pwriter.setVerbose(m_verbose);
-			pwriter.run();
+			try {
+				pwriter.run();
+			}
+			catch ( CancellationException | InterruptedException e ) { }
 		}
 	}
 	

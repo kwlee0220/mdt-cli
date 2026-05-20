@@ -2,14 +2,13 @@ package mdt.cli.get;
 
 import java.io.PrintWriter;
 import java.time.Duration;
+import java.util.concurrent.CancellationException;
 
 import org.barfuin.texttree.api.Node;
 import org.barfuin.texttree.api.TextTree;
 import org.barfuin.texttree.api.TreeOptions;
 import org.barfuin.texttree.api.style.TreeStyles;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
-
-import picocli.CommandLine.Option;
 
 import utils.UnitUtils;
 
@@ -21,6 +20,8 @@ import mdt.model.sm.ref.ElementReference;
 import mdt.model.sm.ref.MDTElementReference;
 import mdt.model.sm.value.ElementValue;
 import mdt.tree.node.DefaultNodeFactories;
+
+import picocli.CommandLine.Option;
 
 /**
  * 
@@ -72,7 +73,10 @@ public abstract class AbstractGetElementCommand extends AbstractMDTCommand {
 				}
 			};
 			pwriter.setVerbose(m_verbose);
-			pwriter.run();
+			try {
+				pwriter.run();
+			}
+			catch ( CancellationException | InterruptedException e ) { }
 		}
 	}
 	
