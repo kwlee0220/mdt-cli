@@ -1,0 +1,5 @@
+---
+endpoint: "http://localhost:12985"
+connectTimeout: "10s"
+readTimeout: "30s"
+workflowEndpoint: "http://localhost:12989"

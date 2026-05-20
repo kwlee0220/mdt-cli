@@ -1,0 +1,133 @@
+plugins {
+	id 'java'
+	id 'application'
+	id("com.gradleup.shadow") version "9.3.0"
+	id 'eclipse'
+}
+
+group = 'etri'
+version = System.getenv("MDT_BUILD_VERSION") ?: "unknown"
+
+application {
+	mainClass = 'mdt.cli.MDTCommandsMain'
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
+repositories {
+	mavenCentral()
+	maven {
+		url = uri("https://maven.aksw.org/repository/internal/")
+		// allowInsecureProtocol = true
+	}
+}
+
+ext {
+	logback_version = '1.5.18'
+	lombok_version = '1.18.46'
+	findbugs_version = '3.0.2'
+	jetbrains_version = '24.1.0'
+
+	okhttp_version = '4.12.0'
+	picocli_version = '4.7.6'
+	jline_version = '3.29.0'
+	text_tree_version = '2.1.2'
+	text_table_version = '1.2.4'
+	
+	tika_version = '2.9.2'
+	
+	junit_jupiter_version = '5.10.2'
+}
+
+dependencies {
+	implementation project(":utils")
+	implementation project(":mdt-client")
+	
+	// @Nullable
+	compileOnly "org.jetbrains:annotations:${jetbrains_version}"
+	// @GuardedBy
+	compileOnly "com.google.code.findbugs:jsr305:${findbugs_version}"
+
+	// Lombok (from the project :utils)
+	compileOnly "org.projectlombok:lombok:${lombok_version}"
+	annotationProcessor "org.projectlombok:lombok:${lombok_version}"
+
+	// logback with SLF4j (from the project :utils)
+	implementation "ch.qos.logback:logback-classic:${logback_version}"
+		
+	// HTTP Client
+	implementation "com.squareup.okhttp3:okhttp:${okhttp_version}"
+		
+	// picocli command line parser
+	implementation "info.picocli:picocli:${picocli_version}"
+	annotationProcessor "info.picocli:picocli-codegen:${picocli_version}"
+	implementation "org.jline:jline:${jline_version}"
+	
+	// CLI에서 테이블 형태로 text 출력할 때 사용
+	implementation "org.nocrala.tools.texttablefmt:text-table-formatter:${text_table_version}"
+	// CLI에서 트리 형태로 text 출력할 때 사용
+	implementation "org.barfuin.texttree:text-tree:${text_tree_version}"
+	
+	// Tika
+	implementation "org.apache.tika:tika-core:${tika_version}"
+
+	// test (JUnit 5 / Jupiter)
+	testImplementation "org.junit.jupiter:junit-jupiter:${junit_jupiter_version}"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+}
+
+jar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	// 의존 프로젝트의 logback-test.xml / logback-spring.xml은 jar에 포함하지 않는다.
+	// (이 프로젝트의 logback.xml은 그대로 포함된다.)
+	exclude 'logback-test.xml'
+	exclude 'logback-spring.xml'
+}
+
+shadowJar {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	mergeServiceFiles()
+
+	manifest {
+		attributes 'Main-Class': application.mainClass.get()
+	}
+
+	exclude 'logback-test.xml'
+	exclude 'logback-spring.xml'
+	exclude 'META-INF/*.SF'
+	exclude 'META-INF/*.DSA'
+	exclude 'META-INF/*.RSA'
+}
+
+eclipse {
+	classpath {
+		defaultOutputDir = file('build/classes/java/main')
+		file {
+			whenMerged { cp ->
+				cp.entries.each { entry ->
+					if (entry.kind == 'src' && entry.path == 'src/main/java') {
+						entry.output = 'build/classes/java/main'
+					}
+					if (entry.kind == 'src' && entry.path == 'src/main/resources') {
+						entry.output = 'build/classes/java/main'
+					}
+					if (entry.kind == 'src' && entry.path == 'src/test/java') {
+						entry.output = 'build/classes/java/test'
+					}
+				}
+			}
+		}
+	}
+}
