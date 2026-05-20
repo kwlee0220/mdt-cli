@@ -23,7 +23,10 @@
 hs_err_pid*
 replay_pid*
 
-.classpath
-.project
-.settings/
-.idea/
+/classes/
+/.gradle/
+/.settings/
+/.classpath
+/.project
+/build/
+/bin/
