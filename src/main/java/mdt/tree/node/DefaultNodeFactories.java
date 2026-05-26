@@ -12,9 +12,9 @@ import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElementCollection;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElementList;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 
+import utils.Preconditions;
 import utils.func.FOption;
 import utils.func.Optionals;
 import utils.stream.FStream;
@@ -79,7 +79,7 @@ public class DefaultNodeFactories {
 	}
 	
 	public static DefaultNode create(SubmodelElement smElm) {
-		Preconditions.checkArgument(smElm != null,
+		Preconditions.checkNotNullArgument(smElm != null,
 									"SubmodelElement is not allowed to be null in DefaultNodeFactories");
 		
 		String semanticIdStr = ReferenceUtils.getSemanticIdStringOrNull(smElm.getSemanticId());

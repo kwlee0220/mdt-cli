@@ -40,7 +40,8 @@ ext {
 	jline_version = '3.29.0'
 	text_tree_version = '2.1.2'
 	text_table_version = '1.2.4'
-	
+	commons_beanutils_version = '1.9.4'
+	commons_logging_version = '1.3.6'
 	tika_version = '2.9.2'
 	
 	junit_jupiter_version = '5.10.2'
@@ -61,6 +62,9 @@ dependencies {
 
 	// logback with SLF4j (from the project :utils)
 	implementation "ch.qos.logback:logback-classic:${logback_version}"
+	
+	implementation "commons-beanutils:commons-beanutils:${commons_beanutils_version}"
+	implementation "commons-logging:commons-logging:${commons_logging_version}" 
 		
 	// HTTP Client
 	implementation "com.squareup.okhttp3:okhttp:${okhttp_version}"
@@ -111,23 +115,23 @@ shadowJar {
 	exclude 'META-INF/*.RSA'
 }
 
-eclipse {
-	classpath {
-		defaultOutputDir = file('build/classes/java/main')
-		file {
-			whenMerged { cp ->
-				cp.entries.each { entry ->
-					if (entry.kind == 'src' && entry.path == 'src/main/java') {
-						entry.output = 'build/classes/java/main'
-					}
-					if (entry.kind == 'src' && entry.path == 'src/main/resources') {
-						entry.output = 'build/classes/java/main'
-					}
-					if (entry.kind == 'src' && entry.path == 'src/test/java') {
-						entry.output = 'build/classes/java/test'
-					}
-				}
-			}
-		}
-	}
-}
+// eclipse {
+// 	classpath {
+// 		defaultOutputDir = file('build/classes/java/main')
+// 		file {
+// 			whenMerged { cp ->
+// 				cp.entries.each { entry ->
+// 					if (entry.kind == 'src' && entry.path == 'src/main/java') {
+// 						entry.output = 'build/classes/java/main'
+// 					}
+// 					if (entry.kind == 'src' && entry.path == 'src/main/resources') {
+// 						entry.output = 'build/classes/java/main'
+// 					}
+// 					if (entry.kind == 'src' && entry.path == 'src/test/java') {
+// 						entry.output = 'build/classes/java/test'
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }

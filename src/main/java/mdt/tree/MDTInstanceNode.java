@@ -7,9 +7,9 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.barfuin.texttree.api.Node;
 import org.eclipse.digitaltwin.aas4j.v3.model.Submodel;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
+import utils.Preconditions;
 import utils.stream.FStream;
 
 import mdt.model.sm.data.Data;
@@ -207,8 +207,8 @@ public class MDTInstanceNode implements Node {
 		private Simulation m_simulation;
 		
 		public MDTInstanceNode build() {
-			Preconditions.checkArgument(m_mdtId != null);
-			Preconditions.checkArgument(m_info != null);
+			Preconditions.checkArgument(m_mdtId != null, "mdtId is null");
+			Preconditions.checkArgument(m_info != null, "informationModelSubmodel is null");
 //			Preconditions.checkArgument(m_data != null);
 			
 			return new MDTInstanceNode(this);
