@@ -70,7 +70,7 @@ goto fail
 :execute
 @rem Setup the command line
 
-set CLASSPATH=%APP_HOME%\lib\mdt-cli-1.6.0-all.jar
+set CLASSPATH=%APP_HOME%\lib\mdt-cli-1.5.0-all.jar
 
 
 @rem Execute mdt-cli
