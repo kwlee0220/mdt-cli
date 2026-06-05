@@ -5,16 +5,16 @@ import java.io.File;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.MDTManager;
 import mdt.model.ResourceAlreadyExistsException;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.instance.MDTInstanceManagerException;
-
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 
 /**
