@@ -214,6 +214,9 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 			else {
 				instances = manager.getInstanceAll();
 			}
+			
+			// 인스턴스의 식별자를 기준으로 정렬한다.
+			instances.sort((a, b) -> a.getId().compareTo(b.getId()));
 
 			if ( m_long ) {
 				switch ( m_output ) {
