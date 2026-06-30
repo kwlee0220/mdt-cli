@@ -47,10 +47,6 @@ public abstract class AbstractGetElementCommand extends AbstractMDTCommand {
 
 	protected void run(MDTInstanceManager manager, ElementReference elmRef) throws Exception {
 		if ( m_repeat == null ) {
-			if ( elmRef instanceof MDTElementReference iref ) {
-				iref.activate(manager);
-			}
-			
 			try ( PrintWriter pw = new PrintWriter(System.out, true) ) {
 				printOutput(elmRef, pw);
 			}
@@ -101,6 +97,6 @@ public abstract class AbstractGetElementCommand extends AbstractMDTCommand {
 	}
 
 	protected String toDisplayValue(ElementValue value) throws Exception {
-		return value.toValueJsonString();
+		return value.toDisplayString();
 	}
 }

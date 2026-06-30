@@ -3,13 +3,13 @@ package mdt.cli.get;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import mdt.model.MDTManager;
-import mdt.model.instance.MDTInstanceManager;
-import mdt.model.sm.ref.ElementReference;
-import mdt.model.sm.ref.ElementReferences;
-
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
+
+import mdt.model.MDTManager;
+import mdt.model.instance.MDTInstanceManager;
+import mdt.model.sm.ref.ElementReferences;
+import mdt.model.sm.ref.MDTElementReference;
 
 /**
  * 
@@ -40,7 +40,8 @@ public class GetParameterCommand extends AbstractGetElementCommand {
 		MDTInstanceManager manager = mdt.getInstanceManager();
 		
 		String elmRef = String.format("param:%s:%s", m_instanceId, m_parameterId);
-		ElementReference smeRef = ElementReferences.parseExpr(elmRef);
+		MDTElementReference smeRef = ElementReferences.parseExpr(elmRef);
+		smeRef.activate(manager);
 		
 		run(manager, smeRef);
 	}

@@ -4,25 +4,23 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 
-import org.eclipse.digitaltwin.aas4j.v3.model.Submodel;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
 import mdt.model.MDTManager;
-import mdt.model.ModelValidationException;
-import mdt.model.SubmodelService;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.ref.DefaultElementReference;
 import mdt.model.sm.ref.DefaultSubmodelReference;
 import mdt.model.sm.ref.DefaultSubmodelReference.ByIdShortSubmodelReference;
+import mdt.model.sm.value.ElementValues;
 import mdt.task.builtin.AASOperationTask;
 import mdt.task.builtin.AbstractTaskCommand;
 import mdt.workflow.model.TaskDescriptor;
-
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 
 /**
@@ -83,26 +81,13 @@ public class RunSubmodelCommand extends AbstractTaskCommand {
 		Map<String,SubmodelElement> outputs = aasOpTask.run(manager);
 		if ( m_showResults ) {
 			for ( Map.Entry<String, SubmodelElement> e : outputs.entrySet() ) {
-				System.out.printf("%s: %s%n", e.getKey(), e.getValue());
+				System.out.printf("%s: %s%n", e.getKey(), ElementValues.getValue(e.getValue()).toDisplayString());
 			}
 		}
 		
 		Duration elapsed = Duration.between(started, Instant.now());
 		getLogger().info("Submodel: {}:{}, elapsedTime={}", m_instanceId, m_submodelIdShort, elapsed);
 	}
-
-//	private void loadOperationSubmodel(MDTInstanceManager manager, TaskDescriptor descriptor)
-//		throws ModelValidationException {
-//		DefaultSubmodelReference smRef = ByIdShortSubmodelReference.ofIdShort(m_instanceId, m_submodelIdShort);
-//		smRef.activate(manager);
-//		descriptor.setSubmodelRef(smRef);
-//		
-//		SubmodelService svc = smRef.get();
-//		Submodel metadata = svc.getSubmodel(Modifier.METADATA);
-//		
-//		descriptor.setId(metadata.getIdShort());
-//        descriptor.addLabel(TaskUtils.LABEL_MDT_OPERATION, smRef.toStringExpr());
-//	}
 
 	public static void main(String... args) throws Exception {
 		main(new RunSubmodelCommand(), args);

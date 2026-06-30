@@ -4,6 +4,9 @@ import org.eclipse.digitaltwin.aas4j.v3.model.Submodel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Parameters;
+
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.MDTManager;
 import mdt.model.ModelValidationException;
@@ -13,13 +16,8 @@ import mdt.model.expr.MDTExpressionParser;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.ref.DefaultSubmodelReference;
 import mdt.task.builtin.AASOperationTaskCommand;
-import mdt.task.builtin.HttpTaskCommand;
-import mdt.task.builtin.ProgramTaskCommand;
 import mdt.task.builtin.TaskUtils;
 import mdt.workflow.model.TaskDescriptor;
-
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Parameters;
 
 
 /**
@@ -33,8 +31,7 @@ import picocli.CommandLine.Parameters;
 	mixinStandardHelpOptions = true,
 	description = "AI/Simulation Submodel execution command.",
 	subcommands = {
-		ProgramTaskCommand.class,
-		HttpTaskCommand.class,
+		RESTfulOperationCommand.class,
 		AASOperationTaskCommand.class,
 	}
 )

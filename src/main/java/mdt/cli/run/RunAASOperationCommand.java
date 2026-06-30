@@ -11,9 +11,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
 
-import utils.Throwables;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
 import utils.UnitUtils;
-import utils.func.Unchecked;
 import utils.stream.FStream;
 import utils.stream.KeyValueFStream;
 
@@ -24,13 +26,11 @@ import mdt.model.instance.MDTInstanceManagerAware;
 import mdt.model.sm.ref.DefaultElementReference;
 import mdt.model.sm.ref.ElementReferences;
 import mdt.model.sm.value.ElementValue;
-import mdt.task.TaskException;
+import mdt.model.sm.value.ElementValues;
 import mdt.task.builtin.MultiVariablesCommand;
+import mdt.workflow.model.ArgumentSpec;
+import mdt.workflow.model.ArgumentSpec.LiteralArgumentSpec;
 import mdt.workflow.model.ArgumentSpec.ReferenceArgumentSpec;
-
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 
 /**
@@ -96,72 +96,49 @@ public class RunAASOperationCommand extends MultiVariablesCommand {
 		
 		// Command line의 input 변수 값을 input OperationVariable에 설정한다.
 		KeyValueFStream.from(tvsDesc.getInputs())
-					    .forEachOrThrow((argId, argSpec) -> {
-							try {
-								argSpec = MDTInstanceManagerAware.activate(argSpec, manager);
-								opSvc.setInputVariableValue(argId, argSpec.readValue());
-							}
-							catch ( Exception e ) {
-								Throwable cause = Throwables.unwrapThrowable(e);
-								String msg = String.format("Failed to set input argument: id=%s, cause=%s", argId, cause);
-								throw new TaskException(msg, cause);
-							}
-					    });
+						.match(m_inputArguments)
+						.forEachOrThrow((argId, match) -> {
+							ArgumentSpec argSpec = MDTInstanceManagerAware.activate(match._1, manager);
+							SubmodelElement var = readArgument(match._2, argSpec);
+							opSvc.setInputVariable(argId, var);
+						});
 		
 		// Command line의 inoutput 변수 값을 inoutput OperationVariable에 설정한다.
 		KeyValueFStream.from(tvsDesc.getInoutputs())
-			    .forEachOrThrow((argId, argSpec) -> {
-					try {
-						argSpec = MDTInstanceManagerAware.activate(argSpec, manager);
-						opSvc.setInoutputVariableValue(argId, argSpec.readValue());
-					}
-					catch ( Exception e ) {
-						Throwable cause = Throwables.unwrapThrowable(e);
-						String msg = String.format("Failed to set inoutput argument: id=%s, cause=%s",
-													argId, cause);
-						throw new TaskException(msg, cause);
-					}
-			    });
+						.match(m_inoutputArguments)
+						.forEachOrThrow((argId, match) -> {
+							ArgumentSpec argSpec = MDTInstanceManagerAware.activate(match._1, manager);
+							SubmodelElement var = readArgument(match._2, argSpec);
+							opSvc.setInputVariable(argId, var);
+						});
 		
 		FStream.from(tvsDesc.getOutputs().values())
 				.forEach(arg -> MDTInstanceManagerAware.activate(arg, manager));
 		
 		opSvc.setTimeout(m_timeout);
 		opSvc.run();
-		
+
+		// 출력 변수의 값을 수집된 출력 값으로 갱신한다.
 		KeyValueFStream.from(tvsDesc.getOutputs())
-						.match(opSvc.getOutputVariableValues())
-						.forEachOrThrow((k, match) -> {
-							ReferenceArgumentSpec outVar = (ReferenceArgumentSpec)match._1;
+						.match(opSvc.getOutputVariables())
+						.forEach((argId, match) -> {
+							ReferenceArgumentSpec outArgSpec = match._1;
 							try {
-								ElementValue val = match._2;
-								Unchecked.acceptOrThrowSneakily(val, outVar::updateValue);
+								SubmodelElement outVal = match._2.getValue();
+								outArgSpec.updateValue(ElementValues.getValue(outVal));
 							}
-							catch ( Exception e ) {
-								Throwable cause = Throwables.unwrapThrowable(e);
-								String msg = String.format("Failed to set output variable: id=%s, cause=%s",
-															k, cause);
-								throw new TaskException(msg, cause);
+							catch ( IOException e ) {
+								getLogger().warn("Failed to update output argument: id={}, cause={}", argId, e);
 							}
 						});
-		KeyValueFStream.from(tvsDesc.getInoutputs())
-						.match(opSvc.getInoutputVariableValues())
-						.forEachOrThrow((k, match) -> {
-							ReferenceArgumentSpec outVar = (ReferenceArgumentSpec)match._1;
-							try {
-								ElementValue val = match._2;
-								Unchecked.acceptOrThrowSneakily(val, outVar::updateValue);
-							}
-							catch ( Exception e ) {
-								Throwable cause = Throwables.unwrapThrowable(e);
-								String msg = String.format("Failed to set inoutput variable: id=%s, cause=%s",
-															k, cause);
-								throw new TaskException(msg, cause);
-							}
-						});
+		
 		if ( m_showResult ) {
-			opSvc.getOutputVariableValues().forEach((k, v) -> System.out.printf("%s: %s%n", k, v));
-			opSvc.getInoutputVariableValues().forEach((k, v) -> System.out.printf("%s: %s%n", k, v));
+			KeyValueFStream.from(opSvc.getOutputVariables())
+							.mapValue(var -> ElementValues.getValue(var.getValue()))
+							.forEach((k, v) -> System.out.printf("%s: %s%n", k, v));
+			KeyValueFStream.from(opSvc.getInoutputVariables())
+							.mapValue(var -> ElementValues.getValue(var.getValue()))
+							.forEach((k, v) -> System.out.printf("%s: %s%n", k, v));
 		}
 	}
 	
@@ -191,5 +168,22 @@ public class RunAASOperationCommand extends MultiVariablesCommand {
 	
 	public static void main(String... args) throws Exception {
 		main(new RunAASOperationCommand(), args);
+	}
+	
+	private SubmodelElement readArgument(SubmodelElement proto, ArgumentSpec argSpec) throws Exception {
+		if ( argSpec instanceof ReferenceArgumentSpec refArgSpec ) {
+			// 'Value' 값만 읽어오는 경우 (특히 SMC/SML 의 경우), 읽어온 값을 모두 반영할 수 없기
+			// 때문에 SubmodelElement 전체를 읽어온다.
+			// 특히 Timeseries SMC의 경우에는 가변 길이의 값을 지원할 수 없게 됨.
+			return refArgSpec.read();
+		}
+		else if ( argSpec instanceof LiteralArgumentSpec litArgSpec ) {
+			ElementValue argv = litArgSpec.readValue();
+			ElementValues.update(proto, argv);
+			return proto;
+		}
+		else {
+			throw new IllegalArgumentException("Unsupported ArgumentSpec: " + argSpec.getClass().getName());
+		}
 	}
 }
