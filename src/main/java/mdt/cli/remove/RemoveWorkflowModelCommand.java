@@ -63,7 +63,7 @@ public class RemoveWorkflowModelCommand extends AbstractMDTCommand {
 	        
 	        FStream.from(svc.getWorkflowModelAll())
 			        .filter(wf -> matcher.matches(Paths.get(wf.getId())))
-			        .forEach(wf -> svc.removeWorkflow(wf.getId()));
+			        .forEach(wf -> svc.removeWorkflowModel(wf.getId()));
 		}
 		else {
 			if ( m_modelIds == null || m_modelIds.isEmpty() ) {

@@ -32,7 +32,7 @@ import picocli.CommandLine.Command;
 	optionListHeading = "Options:%n",
 	mixinStandardHelpOptions = true,
 	description="%nManufactoring DigitalTwin (MDT) related commands.",
-	version = "1.4.1",
+	versionProvider = MDTVersionProvider.class,
 	subcommands = {
 		EndpointCommand.class,
 		BuildInstanceCommand.class,

@@ -40,13 +40,17 @@ public class AddMDTInstanceCommand extends AbstractMDTCommand {
 				description="Identifier of the MDTInstance to register")
 	private String m_id;
 
-	/** 등록할 구현체의 경로. 디렉터리 또는 zip 파일을 지정한다. 필수 인자. */
+	/**
+	 * 등록할 구현체의 경로.
+	 * 디렉터리 또는 zip 파일을 지정한다. 필수 인자.
+	 */
 	@Parameters(index="1", arity="1", paramLabel="path",
 				description="Path to the MDTInstance implementation directory or zip file")
 	private File m_instanceFile;
 
 	/**
-	 * MDTInstance가 사용할 포트 번호. {@code -1}이면 서버가 자동으로 포트를 할당하거나 기본값을 사용한다.
+	 * MDTInstance가 사용할 포트 번호.
+	 * {@code -1}이면 서버가 자동으로 포트를 할당하거나 기본값을 사용한다.
 	 */
 	@Option(names={"--port", "-p"}, paramLabel="number",
 			description="Port number for the MDTInstance (-1 for auto-assign, default: ${DEFAULT-VALUE})",
@@ -100,6 +104,5 @@ public class AddMDTInstanceCommand extends AbstractMDTCommand {
 			System.err.printf("Failed to add MDTInstance: id=%s, cause=%s.%n",
 								m_id, (cause != null) ? cause.getMessage() : e.getMessage());
 		}
-
 	}
 }

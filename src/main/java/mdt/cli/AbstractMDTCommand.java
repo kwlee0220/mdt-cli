@@ -20,6 +20,7 @@ import mdt.model.MDTManager;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import picocli.CommandLine;
+import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Option;
 
@@ -36,6 +37,9 @@ import picocli.CommandLine.Option;
  *
  * @author Kang-Woo Lee (ETRI)
  */
+// 하위 명령의 '-V/--version'도 루트 명령과 같은 버전을 출력하도록 버전 제공자를 지정한다.
+// (picocli는 상위 클래스의 @Command 속성을 하위 클래스에 상속한다.)
+@Command(versionProvider = MDTVersionProvider.class)
 public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 	private static final org.slf4j.Logger s_logger = LoggerFactory.getLogger(AbstractMDTCommand.class);
 	private org.slf4j.Logger m_logger;

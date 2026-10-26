@@ -8,6 +8,7 @@ import org.eclipse.digitaltwin.aas4j.v3.model.File;
 import org.eclipse.digitaltwin.aas4j.v3.model.MultiLanguageProperty;
 import org.eclipse.digitaltwin.aas4j.v3.model.Operation;
 import org.eclipse.digitaltwin.aas4j.v3.model.Property;
+import org.eclipse.digitaltwin.aas4j.v3.model.Range;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElementCollection;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElementList;
@@ -100,6 +101,9 @@ public class DefaultNodeFactories {
 		else if ( smElm instanceof SubmodelElementList sml) {
 			return SML_FACT.create(sml);
 		}
+		else if ( smElm instanceof Range rg) {
+			return RANGE_FACT.create(rg);
+		}
 		else if ( smElm instanceof Operation op) {
 			return OP_FACT.create(op);
 		}
@@ -146,6 +150,18 @@ public class DefaultNodeFactories {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			return new AASOperationNode((Operation)element);
+		} 
+	};
+	
+	private static DefaultNodeFactory RANGE_FACT = new DefaultNodeFactory() {
+		@Override
+		public DefaultNode create(SubmodelElement element) {
+			Range range = (Range)element;
+			
+			String title = range.getIdShort();
+			String typeStr = String.format(" (Range[%s])", range.getValueType());
+			String value = String.format("%s ~ %s", range.getMin(), range.getMax());
+			return new TerminalNode(title, typeStr, value);
 		} 
 	};
 	

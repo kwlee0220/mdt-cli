@@ -12,11 +12,10 @@ import java.util.zip.ZipOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import mdt.model.MDTManager;
-import mdt.task.builtin.MultiVariablesCommand;
-
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
+
+import mdt.model.MDTManager;
 
 
 /**
@@ -30,7 +29,7 @@ import picocli.CommandLine.Parameters;
 	mixinStandardHelpOptions = true,
 	description = "Build MDTInstance zip file."
 )
-public class BuildInstanceCommand extends MultiVariablesCommand {
+public class BuildInstanceCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(BuildInstanceCommand.class);
 
 	@Parameters(index="0", paramLabel="id", description="MDTInstance identifier")

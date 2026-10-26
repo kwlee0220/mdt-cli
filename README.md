@@ -49,10 +49,10 @@ MDTManager 접속 정보는 다음 우선순위로 결정된다.
 설정 파일 예([`mdt_client_config.yaml`](mdt_client_config.yaml)):
 
 ```yaml
-endpoint: "http://localhost:12985"
+mdtUrl: "http://localhost:12985"
 connectTimeout: "10s"
 readTimeout: "30s"
-workflowEndpoint: "http://localhost:12989"
+workflowManagerUrl: "http://localhost:12989"
 ```
 
 ## 테스트
@@ -62,6 +62,8 @@ gradle test
 ```
 
 ## 주요 명령 그룹
+
+각 명령의 위치 인자·옵션·사용 예시 등 전체 사용법은 [docs/commands.md](docs/commands.md)를 참고한다.
 
 | 그룹 | 설명 |
 |------|------|

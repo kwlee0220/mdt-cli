@@ -47,6 +47,9 @@ public abstract class AbstractGetElementCommand extends AbstractMDTCommand {
 
 	protected void run(MDTInstanceManager manager, ElementReference elmRef) throws Exception {
 		if ( m_repeat == null ) {
+			if ( elmRef instanceof MDTElementReference iref && !iref.isActivated()) {
+				iref.activate(manager);
+			}
 			try ( PrintWriter pw = new PrintWriter(System.out, true) ) {
 				printOutput(elmRef, pw);
 			}

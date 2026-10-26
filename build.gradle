@@ -106,7 +106,9 @@ shadowJar {
 	mergeServiceFiles()
 
 	manifest {
-		attributes 'Main-Class': application.mainClass.get()
+		attributes 'Main-Class': application.mainClass.get(),
+					// 'mdt -V'가 출력하는 버전 (MDTVersionProvider 참조)
+					'Implementation-Version': project.version
 	}
 
 	exclude 'logback-test.xml'
