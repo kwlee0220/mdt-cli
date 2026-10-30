@@ -25,58 +25,41 @@ repositories {
 	mavenCentral()
 }
 
-ext {
-	logback_version = '1.5.18'
-	lombok_version = '1.18.46'
-	findbugs_version = '3.0.2'
-	jetbrains_version = '24.1.0'
-
-	okhttp_version = '4.12.0'
-	picocli_version = '4.7.6'
-	jline_version = '3.29.0'
-	text_tree_version = '2.1.2'
-	text_table_version = '1.2.4'
-	
-	tika_version = '3.3.3'
-	
-	junit_jupiter_version = '5.10.2'
-}
-
 dependencies {
 	implementation project(":utils")
 	implementation project(":mdt-client")
 	
 	// @Nullable
-	compileOnly "org.jetbrains:annotations:${jetbrains_version}"
+	compileOnly libs.jetbrains.annotations
 	// @GuardedBy
-	compileOnly "com.google.code.findbugs:jsr305:${findbugs_version}"
+	compileOnly libs.findbugs.jsr305
 
 	// Lombok (from the project :utils)
-	compileOnly "org.projectlombok:lombok:${lombok_version}"
-	annotationProcessor "org.projectlombok:lombok:${lombok_version}"
+	compileOnly libs.lombok
+	annotationProcessor libs.lombok
 
 	// logback with SLF4j (from the project :utils)
-	implementation "ch.qos.logback:logback-classic:${logback_version}"
+	implementation libs.logback.classic
 	
 	// HTTP Client
-	implementation "com.squareup.okhttp3:okhttp:${okhttp_version}"
+	implementation libs.okhttp
 		
 	// picocli command line parser
-	implementation "info.picocli:picocli:${picocli_version}"
-	annotationProcessor "info.picocli:picocli-codegen:${picocli_version}"
-	implementation "org.jline:jline:${jline_version}"
+	implementation libs.picocli
+	annotationProcessor libs.picocli.codegen
+	implementation libs.jline
 	
 	// CLI에서 테이블 형태로 text 출력할 때 사용
-	implementation "org.nocrala.tools.texttablefmt:text-table-formatter:${text_table_version}"
+	implementation libs.text.table.formatter
 	// CLI에서 트리 형태로 text 출력할 때 사용
-	implementation "org.barfuin.texttree:text-tree:${text_tree_version}"
+	implementation libs.text.tree
 	
 	// Tika
-	implementation "org.apache.tika:tika-core:${tika_version}"
+	implementation libs.tika.core
 
 	// test (JUnit 5 / Jupiter)
-	testImplementation "org.junit.jupiter:junit-jupiter:${junit_jupiter_version}"
-	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+	testImplementation libs.junit.jupiter
+	testRuntimeOnly libs.junit.platform.launcher
 }
 
 tasks.named('test') {
