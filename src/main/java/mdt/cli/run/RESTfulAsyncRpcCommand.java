@@ -100,7 +100,7 @@ public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 		JsonMapper mapper = MDTModelSerDe.getJsonMapper();
 
 		Map<String,JsonNode> inputs = KeyValueFStream.from(cmdArgs.getInputs())
-														.mapValue((k,argStr) -> {
+														.mapValue(argStr -> {
 															try {
 																return loadInputArgument(manager, argStr);
 															}
