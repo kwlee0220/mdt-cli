@@ -71,7 +71,7 @@ public class RunOperationSubmodelCommand extends AbstractRunTaskCommand {
 		}
 
 		String smRefStr = String.format("%s:%s", m_instanceId, m_submodelIdShort);
-		DefaultSubmodelReference smRef = ElementReferences.parseSubmodelReference(smRefStr);
+		DefaultSubmodelReference smRef = ElementReferences.parseSubmodelExpr(smRefStr);
 
 		// Submodel의 인자 기술자 로딩한다.
 		smRef.activate(manager);

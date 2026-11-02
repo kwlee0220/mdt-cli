@@ -122,7 +122,7 @@ public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 							ElementValue argv = refArg.readValue();
 							outArgs.put(argId, new OutputArgument(refArg, argv));
 							outputs.put(argId, ( argv instanceof FileValue )
-													? refArg.getElementReference().toJsonNode()
+													? refArg.getReference().toJsonNode()
 													: argv.toJsonNode());
 						});
 
@@ -222,7 +222,7 @@ public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 
 	private ElementValue update(OutputArgument outArg, JsonNode outNode) throws IOException {
 		// '@type' 속성이 없는 경우는 요청 시점에 읽어둔 값의 타입을 그대로 사용한다.
-		ElementValue outValue = ElementValues.parseGeneralJsonNode(outNode, outArg::proto);
+		ElementValue outValue = ElementValues.parseJsonNode(outNode, outArg::proto);
 		outArg.argSpec().updateValue(outValue);
 
 		return outValue;

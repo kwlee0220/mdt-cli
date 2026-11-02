@@ -245,7 +245,7 @@ public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 	 */
 	private Instant parseDatetime(String optionName, String datetimeExpr) {
 		try {
-			return Instants.fromString(datetimeExpr);
+			return Instants.parse(datetimeExpr);
 		}
 		catch ( DateTimeParseException e ) {
 			throw parameterError(String.format("invalid '%s' datetime: %s", optionName, datetimeExpr));

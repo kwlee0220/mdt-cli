@@ -891,6 +891,7 @@ set task를 실행한다. `source` 값을 `target` 위치에 기록한다. (위�
 | `--out.target <ref-expr>` | O | 기록할 대상 참조 |
 
 - 둘 중 하나라도 없으면 오류다. `source`/`target` 이외의 이름이나 `--inout.*` 를 주어도 오류다.
+- `source` 는 요소 참조식이나 값 리터럴이어야 한다. 따옴표 없는 단어·숫자·불리언(`hello`, `25.3`, `true`)은 그대로 값으로 읽는다. Submodel 참조(`line-01:Data`), 빈 문자열, 따옴표 없는 날짜·기간(`PT5S`)처럼 둘 다 아닌 입력은 오류다. 문자열로 넘기려면 따옴표로 감싼다(예: `--in.source "'PT5S'"`). 2026-11-01 이전에는 이런 입력을 오류 없이 문자열로 기록했다.
 
 ```bash
 mdt run set --in.source 25.3 --out.target param:line-01:temperature

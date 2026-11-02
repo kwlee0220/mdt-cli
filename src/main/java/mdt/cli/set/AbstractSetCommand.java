@@ -81,7 +81,7 @@ public abstract class AbstractSetCommand extends AbstractMDTCommand {
 		if ( target instanceof MDTElementReference mdtRef ) {
 			mdtRef.activate(manager);
 		}
-		target.updateValue(valueJsonStr);
+		target.updateFromValueJson(valueJsonStr);
 	}
 	
 	/**
@@ -112,12 +112,12 @@ public abstract class AbstractSetCommand extends AbstractMDTCommand {
 //				target.update(newSme);
 //			}
 //			else {
-				target.updateValue(jsonStr);
+				target.updateFromValueJson(jsonStr);
 //			}
 		}
 		catch ( IOException e ) {
 			// JSON 파일에 SubmodelElement이 아닌 ElementValue가 저장된 경우에는 값을 읽어서 갱신시킨다.
-			target.updateValue(jsonStr);
+			target.updateFromValueJson(jsonStr);
 		}
 	}
 	

@@ -53,7 +53,7 @@ public class SetTaskCommand extends DynamicArgumentsCommand {
 												+ cmdArgs.getInoutputs().keySet());
 		}
 
-		// TaskArgument.parseTaskArgument()와 TaskArgument.reference()는 null 표현식에 대해
+		// TaskArgument.parseExpr()와 TaskArgument.reference()는 null 표현식에 대해
 		// 불친절한 오류를 발생시키기 때문에, 인자 누락 여부를 먼저 확인한다.
 		String srcExpr = cmdArgs.getInputs().get(SetTask.ARG_SOURCE);
 		if ( srcExpr == null ) {
@@ -64,7 +64,7 @@ public class SetTaskCommand extends DynamicArgumentsCommand {
 			throw new IllegalArgumentException("'--out." + SetTask.ARG_TARGET + "' argument is not specified");
 		}
 
-		TaskArgument src = TaskArgument.parseTaskArgument(srcExpr);
+		TaskArgument src = TaskArgument.parseExpr(srcExpr);
 		ReferenceArgument tar = TaskArgument.reference(tarExpr);
 
 		SetTask task = SetTask.builder()
