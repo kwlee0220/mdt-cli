@@ -125,7 +125,7 @@ public abstract class AbstractSetCommand extends AbstractMDTCommand {
 		throws IOException {
 		SubmodelService svc = target.getSubmodelService();
 		
-		String path = Nullables.orElseGet(fileSpec.m_path, fileSpec.m_file::getName);
+		String path = Nullables.orGet(fileSpec.m_path, fileSpec.m_file::getName);
 		String contentType = fileSpec.m_mimeType;
 		if ( contentType == null ) {
 			contentType = new Tika().detect(fileSpec.m_file);

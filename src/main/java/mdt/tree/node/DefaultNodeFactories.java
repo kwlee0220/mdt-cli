@@ -79,7 +79,7 @@ public class DefaultNodeFactories {
 	}
 	
 	public static DefaultNode create(SubmodelElement smElm) {
-		Preconditions.checkNotNullArgument(smElm != null,
+		Preconditions.checkNotNullArgument(smElm,
 									"SubmodelElement is not allowed to be null in DefaultNodeFactories");
 		
 		String semanticIdStr = ReferenceUtils.getSemanticIdStringOrNull(smElm.getSemanticId());

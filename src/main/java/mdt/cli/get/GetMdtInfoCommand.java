@@ -191,7 +191,7 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 
 		List<DefaultNode> nodes = Lists.newArrayList();
 		if ( showInfo ) {
-			Nullables.ifNotNull(buildInfoNode(instance, pw), nodes::add);
+			Nullables.accept(buildInfoNode(instance, pw), nodes::add);
 		}
 		if ( showParameters ) {
 			try {
@@ -203,7 +203,7 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 			}
 		}
 		if ( showOperations ) {
-			Nullables.ifNotNull(buildOperationsNode(instance), nodes::add);
+			Nullables.accept(buildOperationsNode(instance), nodes::add);
 		}
 		if ( showCompositions ) {
 			SubmodelService infoSvc = getInformationModelService(instance);
@@ -213,10 +213,10 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 				}
 			}
 			else {
-				Nullables.ifNotNull(buildCompositionSubNode(infoSvc, "TwinComposition.CompositionItems",
+				Nullables.accept(buildCompositionSubNode(infoSvc, "TwinComposition.CompositionItems",
 														"Components", "CompositionItems", pw),
 								nodes::add);
-				Nullables.ifNotNull(buildCompositionSubNode(infoSvc, "TwinComposition.CompositionDependencies",
+				Nullables.accept(buildCompositionSubNode(infoSvc, "TwinComposition.CompositionDependencies",
 														"Dependencies", "CompositionDependencies", pw),
 								nodes::add);
 			}

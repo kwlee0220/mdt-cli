@@ -64,7 +64,7 @@ public class SetFileCommand extends AbstractMDTCommand {
 		
 		SubmodelService svc = targetRef.getSubmodelService();
 		
-		String path = Nullables.orElseGet(m_path, m_file::getName);
+		String path = Nullables.orGet(m_path, m_file::getName);
 		String contentType = m_mimeType;
 		if ( contentType == null ) {
 			contentType = new Tika().detect(m_file);
