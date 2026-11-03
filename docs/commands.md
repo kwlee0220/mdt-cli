@@ -945,10 +945,6 @@ mdt simulation run sim-line-01 -e --poll 5s
 소스에는 존재하지만 `MDTCommandsMain`의 `subcommands`에 등록되어 있지 않아 현재 `mdt` 명령으로
 호출할 수 없는 항목이 있다. 참고용으로만 기록한다.
 
-- `mdt manager shutdown` — `MDTCommandsMain.MDTManagerCommands`(`manager` 그룹)와
-  `ShutdownManagerCommand`(`shutdown`, "실행 중인 MDTInstanceManager 종료")는 정의되어 있으나
-  루트 명령에 등록되어 있지 않다. (`README.md`의 명령 그룹 표에는 `manager`가 언급되어 있으므로
-  향후 등록 예정으로 보인다.)
 - `mdt/cli/workflow/`의 `SuspendWorkflowCommand`, `ResumeWorkflowCommand`와 `mdt/cli/`의
   `StopSimulationCommand`, `mdt/task/skku/`의 `SKKUSimulationTaskCommand` 역시 어떤 그룹에도
   등록되어 있지 않다.

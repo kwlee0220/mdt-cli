@@ -84,15 +84,4 @@ public class MDTCommandsMain {
 			StartSkkuSimulationCommand.class,
 		})
 	public static class SimulationCommands extends CommandCollection {}
-	
-	@Command(
-		name="manager",
-		parameterListHeading = "Parameters:%n",
-		optionListHeading = "Options:%n",
-		mixinStandardHelpOptions = true,
-		description="MDTManager related commands",
-		subcommands= {
-			ShutdownManagerCommand.class,
-		})
-	public static class MDTManagerCommands extends CommandCollection {}
 }

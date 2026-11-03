@@ -76,4 +76,3 @@ gradle test
 | `run` | AAS 오퍼레이션, 서브모델 실행 |
 | `resolve` | Reference를 URL로 해석 |
 | `simulation` | SKKU 시뮬레이션 등 시뮬레이션 제어 |
-| `manager` | MDTManager 종료 등 매니저 제어 |
