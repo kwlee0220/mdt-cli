@@ -18,8 +18,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Lists;
 
 import utils.UnitUtils;
-import utils.func.Optionals;
 import utils.stream.FStream;
+import utils.func.Nullables;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.cli.PeriodicRefreshingConsole;
@@ -191,7 +191,7 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 
 		List<DefaultNode> nodes = Lists.newArrayList();
 		if ( showInfo ) {
-			Optionals.accept(buildInfoNode(instance, pw), nodes::add);
+			Nullables.ifNotNull(buildInfoNode(instance, pw), nodes::add);
 		}
 		if ( showParameters ) {
 			try {
@@ -203,7 +203,7 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 			}
 		}
 		if ( showOperations ) {
-			Optionals.accept(buildOperationsNode(instance), nodes::add);
+			Nullables.ifNotNull(buildOperationsNode(instance), nodes::add);
 		}
 		if ( showCompositions ) {
 			SubmodelService infoSvc = getInformationModelService(instance);
@@ -213,10 +213,10 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 				}
 			}
 			else {
-				Optionals.accept(buildCompositionSubNode(infoSvc, "TwinComposition.CompositionItems",
+				Nullables.ifNotNull(buildCompositionSubNode(infoSvc, "TwinComposition.CompositionItems",
 														"Components", "CompositionItems", pw),
 								nodes::add);
-				Optionals.accept(buildCompositionSubNode(infoSvc, "TwinComposition.CompositionDependencies",
+				Nullables.ifNotNull(buildCompositionSubNode(infoSvc, "TwinComposition.CompositionDependencies",
 														"Dependencies", "CompositionDependencies", pw),
 								nodes::add);
 			}

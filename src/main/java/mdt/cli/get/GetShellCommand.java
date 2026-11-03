@@ -74,7 +74,7 @@ public class GetShellCommand extends AbstractMDTCommand {
 	public void run(MDTManager mdt) throws Exception {
 		HttpMDTInstanceManager manager = (HttpMDTInstanceManager)mdt.getInstanceManager();
 		
-		HttpMDTInstanceClient instance = Try.get(() -> manager.getInstanceByAasId(m_aasId))
+		HttpMDTInstanceClient instance = Try.of(() -> manager.getInstanceByAasId(m_aasId))
 											.recover(() -> getAnyInstanceByAasIdShort(manager, m_aasId))
 											.recover(() -> manager.getInstance(m_aasId))
 											.get();

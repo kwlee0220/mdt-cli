@@ -5,7 +5,6 @@ import java.io.File;
 import org.apache.tika.Tika;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 
-import utils.func.Optionals;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.MDTManager;
@@ -19,6 +18,8 @@ import mdt.model.sm.value.FileValue;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+
+import utils.func.Nullables;
 
 
 /**
@@ -63,7 +64,7 @@ public class SetFileCommand extends AbstractMDTCommand {
 		
 		SubmodelService svc = targetRef.getSubmodelService();
 		
-		String path = Optionals.getOrElse(m_path, m_file::getName);
+		String path = Nullables.orElseGet(m_path, m_file::getName);
 		String contentType = m_mimeType;
 		if ( contentType == null ) {
 			contentType = new Tika().detect(m_file);

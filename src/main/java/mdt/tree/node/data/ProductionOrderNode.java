@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 
-import utils.func.Optionals;
 
 import mdt.model.sm.data.DefaultProductionOrder;
 import mdt.model.sm.data.ProductionOrder;
@@ -12,6 +11,8 @@ import mdt.tree.node.DefaultNode;
 import mdt.tree.node.DefaultNodeFactory;
 import mdt.tree.node.SimpleListNode;
 import mdt.tree.node.TerminalNode;
+
+import utils.func.Nullables;
 
 
 /**
@@ -23,7 +24,7 @@ public final class ProductionOrderNode extends TerminalNode {
 		setTitle(plan.getProductionOrderID());
 		setValueType(String.format(" 공정(%s)", plan.getOperationID()));
 
-		String uomStr = Optionals.getOrElse("" + plan.getItemUOMCode(), ""); 
+		String uomStr = Nullables.orElse("" + plan.getItemUOMCode(), ""); 
 		String value = String.format("%s(%s%s), schedule: %s~%s",
 										plan.getItemID(), plan.getProductionOrderQuantity(), uomStr,
 										plan.getScheduleStartDateTime(), plan.getScheduleEndDateTime());

@@ -16,8 +16,7 @@ import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElementList;
 import com.google.common.collect.Maps;
 
 import utils.Preconditions;
-import utils.func.FOption;
-import utils.func.Optionals;
+import utils.func.Nullables;
 import utils.stream.FStream;
 
 import mdt.model.Input;
@@ -124,7 +123,7 @@ public class DefaultNodeFactories {
 //			String title = Funcs.getFirst(prop.getDisplayName())
 //								 .map(nt -> String.format("%s(%s)", prop.getIdShort(), nt.getText()))
 //								 .getOrElse(prop.getIdShort());
-			String typeStr = FOption.map(prop.getValueType(), vt -> String.format(" (%s)", vt));
+			String typeStr = Nullables.map(prop.getValueType(), vt -> String.format(" (%s)", vt));
 			return new TerminalNode(title, typeStr, prop.getValue());
 		} 
 	};
@@ -133,7 +132,7 @@ public class DefaultNodeFactories {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			File aasFile = (File)element;
-			String path = Optionals.getOrElse(aasFile.getValue(), "None");
+			String path = Nullables.orElse(aasFile.getValue(), "None");
 			String value = String.format("%s (%s)", path, aasFile.getContentType());
 			return new TerminalNode(aasFile.getIdShort(), " (File)", value);
 		} 

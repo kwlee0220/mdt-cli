@@ -5,7 +5,7 @@ import java.util.List;
 import org.barfuin.texttree.api.Node;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 
-import utils.func.FOption;
+import utils.func.Nullables;
 
 import mdt.model.sm.data.DefaultEquipment;
 import mdt.model.sm.data.Equipment;
@@ -23,7 +23,7 @@ public final class EquipmentNode extends DefaultNode {
 	public EquipmentNode(Equipment equip) {
 		m_equip = equip;
 		
-		String nameStr = FOption.mapOrElse(equip.getEquipmentName(), n -> String.format(" (%s)", n), "");
+		String nameStr = Nullables.mapOrElse(equip.getEquipmentName(), n -> String.format(" (%s)", n), "");
 		String title = String.format("%s%s", equip.getEquipmentId(), nameStr);
 		setTitle(title);
 		setValueType(" (Equipment)");

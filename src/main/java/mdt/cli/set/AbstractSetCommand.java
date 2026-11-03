@@ -8,8 +8,8 @@ import java.util.Scanner;
 import org.apache.tika.Tika;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 
-import utils.func.Optionals;
 import utils.io.IOUtils;
+import utils.func.Nullables;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.SubmodelService;
@@ -125,7 +125,7 @@ public abstract class AbstractSetCommand extends AbstractMDTCommand {
 		throws IOException {
 		SubmodelService svc = target.getSubmodelService();
 		
-		String path = Optionals.getOrElse(fileSpec.m_path, fileSpec.m_file::getName);
+		String path = Nullables.orElseGet(fileSpec.m_path, fileSpec.m_file::getName);
 		String contentType = fileSpec.m_mimeType;
 		if ( contentType == null ) {
 			contentType = new Tika().detect(fileSpec.m_file);

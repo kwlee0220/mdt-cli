@@ -7,8 +7,8 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
-import utils.func.Optionals;
 import utils.stream.FStream;
+import utils.func.Nullables;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.MDTManager;
@@ -82,8 +82,8 @@ public class GetWorkflowInstanceCommand extends AbstractMDTCommand {
 		table.addCell(" MODEL "); table.addCell(" " + workflow.getModelId());
 		table.addCell(" STATUS "); table.addCell(" " + workflow.getStatus());
 		table.addCell(" CREATION_TIME "); table.addCell(" " + workflow.getCreationTime());
-		table.addCell(" START_TIME "); table.addCell(" " + Optionals.getOrElse(workflow.getStartTime(), ""));
-		table.addCell(" FINISH_TIME "); table.addCell(" " + Optionals.getOrElse(workflow.getFinishTime(), ""));
+		table.addCell(" START_TIME "); table.addCell(" " + Nullables.orElse(workflow.getStartTime(), ""));
+		table.addCell(" FINISH_TIME "); table.addCell(" " + Nullables.orElse(workflow.getFinishTime(), ""));
 		
 		FStream.from(workflow.getTasks()).zipWithIndex().forEach(tup -> {
 			NodeTask task = tup.value();

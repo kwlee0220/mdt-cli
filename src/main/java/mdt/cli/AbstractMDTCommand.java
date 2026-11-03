@@ -10,7 +10,7 @@ import utils.LoggerSettable;
 import utils.Picoclies;
 import utils.Throwables;
 import utils.func.FOption;
-import utils.func.Optionals;
+import utils.func.Nullables;
 import utils.io.FileUtils;
 
 import mdt.client.HttpMDTManager;
@@ -102,7 +102,7 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 						getLogger().debug("loading client config from file: %s", file.getAbsolutePath());
                         return MDTClientConfig.load(file);
 					})
-					.orElse(() -> {
+					.or(() -> {
 						// client config file이 존재하지 않는 경우에는 환경변수 MDT_URL에 기록된
 						// endpoint 정보를 사용하여 접속을 시도한다.
 						return FOption.ofNullable(System.getenv("MDT_URL"))
@@ -120,7 +120,7 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 	 */
 	@Override
 	public org.slf4j.Logger getLogger() {
-		return Optionals.getOrElse(m_logger, s_logger);
+		return Nullables.orElse(m_logger, s_logger);
 	}
 
 	/**

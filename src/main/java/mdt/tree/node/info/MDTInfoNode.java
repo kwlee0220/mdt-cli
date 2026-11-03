@@ -2,13 +2,14 @@ package mdt.tree.node.info;
 
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 
-import utils.func.Optionals;
 
 import mdt.model.sm.info.DefaultMDTInfo;
 import mdt.model.sm.info.MDTInfo;
 import mdt.tree.node.DefaultNode;
 import mdt.tree.node.DefaultNodeFactory;
 import mdt.tree.node.TerminalNode;
+
+import utils.func.Nullables;
 
 
 /**
@@ -19,7 +20,7 @@ public class MDTInfoNode extends TerminalNode {
 	public MDTInfoNode(MDTInfo mdtInfo) {
 		setTitle(mdtInfo.getIdShort());
 		
-		String statusStr = "" + Optionals.getOrElse(mdtInfo.getStatus(), "N/A");
+		String statusStr = "" + Nullables.orElse(mdtInfo.getStatus(), "N/A");
 		String value = String.format("name=\"%s\", type=%s, status=%s",
 										mdtInfo.getAssetName(), mdtInfo.getAssetType(), statusStr);
 		setValue(value);

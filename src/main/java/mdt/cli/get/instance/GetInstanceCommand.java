@@ -14,8 +14,8 @@ import org.nocrala.tools.texttablefmt.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import utils.func.Optionals;
 import utils.stream.FStream;
+import utils.func.Nullables;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.cli.IdPair;
@@ -139,7 +139,7 @@ public class GetInstanceCommand extends AbstractMDTCommand {
 				});
 		
 		table.addCell(" STATUS "); table.addCell(" " + instance.getStatus().toString());
-		String epStr = Optionals.getOrElse(instance.getServiceEndpoint(), "");
+		String epStr = Nullables.orElse(instance.getServiceEndpoint(), "");
 		table.addCell(" ENDPOINT "); table.addCell(" " + epStr);
 		
 		System.out.println(table.render());

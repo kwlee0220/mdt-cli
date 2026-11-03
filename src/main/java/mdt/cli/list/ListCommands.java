@@ -5,8 +5,7 @@ import java.io.PrintWriter;
 
 import org.nocrala.tools.texttablefmt.Table;
 
-import utils.func.FOption;
-import utils.func.Optionals;
+import utils.func.Nullables;
 import utils.func.Try;
 import utils.stream.FStream;
 
@@ -55,7 +54,7 @@ public class ListCommands extends CommandCollection {
 		@Override
 		public void collectLine(Object[] cols) {
 			m_writer.println(FStream.of(cols)
-									.map(c -> Optionals.getOrElse(c,""))
+									.map(c -> Nullables.orElse(c,""))
 									.join(m_delim));
 		}
 		
@@ -80,7 +79,7 @@ public class ListCommands extends CommandCollection {
 		@Override
 		public void collectLine(Object[] cols) {
 			FStream.of(cols)
-				    .map(col -> FOption.mapOrElse(col, c-> ""+c, ""))
+				    .map(col -> Nullables.mapOrElse(col, c-> ""+c, ""))
 					.forEach(m_table::addCell);
 		}
 		

@@ -61,7 +61,7 @@ public class StopSimulationCommand extends AbstractMDTCommand {
 		MDTInstance inst = client.getInstanceBySubmodelId(m_targetId);
 		
 		SubmodelService svc = inst.getSubmodelServiceById(m_targetId)
-							    .orElse(() -> inst.getSubmodelServiceByIdShort("Simulation"))
+							    .or(() -> inst.getSubmodelServiceByIdShort("Simulation"))
 							    .getOrThrow(() -> {
 									return new CommandLine.ParameterException(getCommandLine(),
 												String.format("no Simulation submodel found for id=%s", m_targetId));

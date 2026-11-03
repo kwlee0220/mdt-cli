@@ -25,9 +25,9 @@ import utils.InternalException;
 import utils.StopWatch;
 import utils.UnitUtils;
 import utils.Utilities;
-import utils.func.Optionals;
 import utils.http.RESTfulIOException;
 import utils.stream.FStream;
+import utils.func.Nullables;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.cli.PeriodicRefreshingConsole;
@@ -238,7 +238,7 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 			}
 		}
 		catch ( ResourceNotFoundException e ) {
-			pw.println("failed to list MDTInstances: " + Optionals.getOrElse(e.getCause(), e));
+			pw.println("failed to list MDTInstances: " + Nullables.orElse(e.getCause(), e));
 		}
 		catch ( RESTfulIOException e ) {
 			Throwable cause = e.getCause();
@@ -247,7 +247,7 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 				throw new InterruptedException("interrupted while listing MDTInstances");
 			}
 			else {
-				pw.println("failed to list MDTInstances: " + Optionals.getOrElse(cause, e));
+				pw.println("failed to list MDTInstances: " + Nullables.orElse(cause, e));
 			}
 		}
 	}
@@ -413,8 +413,8 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 				.tagKey(n -> n)
 				.groupByKey()
 				.switcher()
-				.ifCase("Info").consume(grp -> outputs.add("Info"))
-				.ifCase("Data").consume(grp -> outputs.add("Data"))
+				.when("Info").then(grp -> outputs.add("Info"))
+				.when("Data").then(grp -> outputs.add("Data"))
 				.otherwise().forEach((k, grp) -> outputs.add(String.format("%s(%d)", k, grp.size())));
 
 		String submodelIdCsv = FStream.from(outputs).join(',');
@@ -423,8 +423,8 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 		return new Object[] {
 			String.format(format, seqNo),
 			instance.getId(),
-			Optionals.getOrElse(instance.getAssetType(), ""),
-			Optionals.getOrElse(instance.getGlobalAssetId(), ""),
+			Nullables.orElse(instance.getAssetType(), ""),
+			Nullables.orElse(instance.getGlobalAssetId(), ""),
 			submodelIdCsv,
 			instance.getStatus(),
 			serviceEndpoint

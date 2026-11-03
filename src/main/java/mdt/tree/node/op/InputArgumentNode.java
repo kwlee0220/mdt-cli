@@ -5,7 +5,7 @@ import java.util.List;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElementList;
 
-import utils.func.FOption;
+import utils.func.Nullables;
 import utils.stream.FStream;
 
 import mdt.model.DefaultInput;
@@ -39,7 +39,7 @@ public final class InputArgumentNode {
 		public DefaultNode create(Input input) {
 			DefaultNode node = DefaultNodeFactories.create(input.getInputValue());
 			
-			String nameStr = FOption.mapOrElse(input.getInputName(), str -> String.format("(%s)", str), "");
+			String nameStr = Nullables.mapOrElse(input.getInputName(), str -> String.format("(%s)", str), "");
 			node.setTitle(String.format("%s%s", input.getInputID(), nameStr));
 			return node;
 		}

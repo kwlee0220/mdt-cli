@@ -5,7 +5,7 @@ import java.util.List;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElementList;
 
-import utils.func.FOption;
+import utils.func.Nullables;
 import utils.stream.FStream;
 
 import mdt.model.DefaultOutput;
@@ -39,7 +39,7 @@ public final class OutputArgumentNode {
 		public DefaultNode create(Output output) {
 			DefaultNode node = DefaultNodeFactories.create(output.getOutputValue());
 			
-			String nameStr = FOption.mapOrElse(output.getOutputName(), str -> String.format("(%s)", str), "");
+			String nameStr = Nullables.mapOrElse(output.getOutputName(), str -> String.format("(%s)", str), "");
 			node.setTitle(String.format("%s%s", output.getOutputID(), nameStr));
 			return node;
 		}

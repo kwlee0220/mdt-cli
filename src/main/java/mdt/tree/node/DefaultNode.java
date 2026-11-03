@@ -2,7 +2,8 @@ package mdt.tree.node;
 
 import org.barfuin.texttree.api.Node;
 
-import utils.func.Optionals;
+import utils.func.Nullables;
+
 
 /**
  *
@@ -63,11 +64,11 @@ public abstract class DefaultNode implements Node {
 		}
 		else {
 			if ( m_hideValue ) {
-				return String.format("%s%s%s", m_prefix, m_title, Optionals.getOrElse(m_valueType, ""));
+				return String.format("%s%s%s", m_prefix, m_title, Nullables.orElse(m_valueType, ""));
 			}
 			else {
-				return String.format("%s%s%s: %s", m_prefix, m_title, Optionals.getOrElse(m_valueType, ""),
-									Optionals.getOrElse(m_value, "None"));
+				return String.format("%s%s%s: %s", m_prefix, m_title, Nullables.orElse(m_valueType, ""),
+									Nullables.orElse(m_value, "None"));
 			}
 		}
 	}

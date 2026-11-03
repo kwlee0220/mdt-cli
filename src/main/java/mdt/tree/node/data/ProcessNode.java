@@ -5,7 +5,7 @@ import java.util.List;
 import org.barfuin.texttree.api.Node;
 import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 
-import utils.func.FOption;
+import utils.func.Nullables;
 
 import mdt.model.sm.data.DefaultOperation;
 import mdt.model.sm.data.Operation;
@@ -23,7 +23,7 @@ public final class ProcessNode extends DefaultNode {
 	public ProcessNode(Operation equip) {
 		m_process = equip;
 		
-		String nameStr = FOption.mapOrElse(equip.getOperationName(), n -> String.format(" (%s)", n), "");
+		String nameStr = Nullables.mapOrElse(equip.getOperationName(), n -> String.format(" (%s)", n), "");
 		String title = String.format("%s%s", equip.getOperationId(), nameStr);
 		setTitle(title);
 		setValueType(" (Operation)");
