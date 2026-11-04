@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.digitaltwin.aas4j.v3.model.DataTypeDefXsd;
 import org.eclipse.digitaltwin.aas4j.v3.model.Property;
@@ -20,10 +21,8 @@ import org.slf4j.LoggerFactory;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 import utils.Instants;
 import utils.UnitUtils;
@@ -31,6 +30,7 @@ import utils.func.Funcs;
 import utils.stream.FStream;
 import utils.stream.KeyValueFStream;
 
+import mdt.cli.CsvFormat;
 import mdt.model.MDTManager;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.ref.DefaultSubmodelReference;
@@ -57,7 +57,7 @@ import mdt.model.sm.value.ElementValues;
 public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(GetTimeSeriesCommand.class);
 	
-	@Parameters(index="0", paramLabel="id", description="MDTInstance id to show.")
+	@Parameters(index="0", paramLabel="instance-id", description="MDTInstance id to show.")
 	private String m_instanceId;
 	
 	@Parameters(index="1", paramLabel="submodel-idShort",
@@ -97,16 +97,22 @@ public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 	 * picocli가 주입하는 이 명령의 {@link CommandSpec}. 사용자 친화적 오류 메시지를 생성하기 위해
 	 * {@link CommandLine}을 얻을 때 사용한다.
 	 */
-	@Spec private CommandSpec m_spec;
-
 	public GetTimeSeriesCommand() {
 		setLogger(s_logger);
 	}
 
+	/** {@link #validate()}에서 옵션으로부터 만든 조회 범위. 지정되지 않았으면 {@code null}. */
+	private TimeSeriesRange m_range;
+
+	@Override
+	protected void validate() {
+		// 원격 접근 이전에 옵션 조합을 먼저 검증한다.
+		m_range = buildRange();
+	}
+
 	@Override
 	public void run(MDTManager mdt) throws Exception {
-		// 원격 접근 이전에 옵션 조합을 먼저 검증한다.
-		TimeSeriesRange range = buildRange();
+		TimeSeriesRange range = m_range;
 
 		MDTInstanceManager manager = mdt.getInstanceManager();
 
@@ -147,20 +153,20 @@ public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 	private TimeSeriesRange buildRange() {
 		if ( m_last != null ) {
 			if ( m_startExpr != null || m_endExpr != null || m_count != null ) {
-				throw parameterError("'--last' cannot be used with '--start', '--end' or '--count'");
+				throw usageError("'--last' cannot be used with '--start', '--end' or '--count'");
 			}
 			return parseLastRange(m_last);
 		}
 
 		if ( m_count != null ) {
 			if ( m_startExpr == null ) {
-				throw parameterError("'--count' requires '--start'");
+				throw usageError("'--count' requires '--start'");
 			}
 			if ( m_endExpr != null ) {
-				throw parameterError("'--count' cannot be used with '--end'");
+				throw usageError("'--count' cannot be used with '--end'");
 			}
 			if ( m_count < 0 ) {
-				throw parameterError("'--count' must be non-negative: " + m_count);
+				throw usageError("'--count' must be non-negative: " + m_count);
 			}
 			return TimeSeriesRange.since(parseDatetime("--start", m_startExpr), m_count);
 		}
@@ -172,7 +178,7 @@ public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 				return TimeSeriesRange.between(from, to);
 			}
 			catch ( IllegalArgumentException e ) {
-				throw parameterError(e.getMessage());
+				throw usageError(e.getMessage());
 			}
 		}
 
@@ -193,7 +199,7 @@ public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 	private TimeSeriesRange parseLastRange(String lastExpr) {
 		String[] parts = lastExpr.split("@");
 		if ( parts.length > 2 ) {
-			throw parameterError("invalid '--last' value: " + lastExpr);
+			throw usageError("invalid '--last' value: " + lastExpr);
 		}
 
 		try {
@@ -205,13 +211,13 @@ public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 			// 접미사가 없는 값은 기간으로 해석되지 않으므로 레코드 개수로 재해석한다.
 			if ( parts.length == 2 ) {
 				// anchor는 기간 범위에만 사용할 수 있다.
-				throw parameterError("'@" + parts[1] + "' anchor cannot be used with a record count: " + lastExpr);
+				throw usageError("'@" + parts[1] + "' anchor cannot be used with a record count: " + lastExpr);
 			}
 			try {
 				return TimeSeriesRange.length(Integer.parseInt(parts[0]));
 			}
 			catch ( NumberFormatException e ) {
-				throw parameterError("invalid '--last' value: " + lastExpr);
+				throw usageError("invalid '--last' value: " + lastExpr);
 			}
 		}
 	}
@@ -231,7 +237,7 @@ public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 			return Anchor.LATEST;
 		}
 		else {
-			throw parameterError("invalid '--last' anchor (candidates: now, latest): " + anchorExpr);
+			throw usageError("invalid '--last' anchor (candidates: now, latest): " + anchorExpr);
 		}
 	}
 
@@ -248,60 +254,66 @@ public class GetTimeSeriesCommand extends AbstractGetElementCommand {
 			return Instants.parse(datetimeExpr);
 		}
 		catch ( DateTimeParseException e ) {
-			throw parameterError(String.format("invalid '%s' datetime: %s", optionName, datetimeExpr));
+			throw usageError(String.format("invalid '%s' datetime: %s", optionName, datetimeExpr));
 		}
 	}
 
-	private CommandLine.ParameterException parameterError(String details) {
-		return new CommandLine.ParameterException(m_spec.commandLine(), details);
-	}
+
+	/** {@code --output} 값. */
+	enum TimeSeriesOutputType { csv, table, tree, json, value };
+	@Option(names={"--output", "-o"}, paramLabel="type",
+			description="output type (candidates: ${COMPLETION-CANDIDATES}, default: ${DEFAULT-VALUE})")
+	private TimeSeriesOutputType m_output = TimeSeriesOutputType.tree;
 
 	@Override
 	protected void printOutput(ElementReference smeRef, PrintWriter pw) throws Exception {
 		switch ( m_output ) {
-			case "csv":
+			case csv:
 				printAsCsv((ElementCollectionValue)smeRef.readValue(), pw);
 				break;
-			case "table":
+			case table:
 				printTable(smeRef, pw);
 				break;
-			case "tree":
+			case tree:
 				pw.print(toDisplayTree(smeRef.read(), TREE_OPTS));
 				break;
-			case "json":
+			case json:
 				pw.print(toDisplayJson(smeRef.read()));
 				break;
-			case "value":
+			case value:
 				pw.print(toDisplayValue(smeRef.readValue()));
 				break;
-			default:
-				throw new IllegalArgumentException("Invalid output type: " + m_output);
-		};
+		}
 	}
 	
 	protected void printAsCsv(ElementCollectionValue value, PrintWriter pw) {
+		// 컬럼은 첫번째 레코드의 필드 이름들로 정하고, 이후 레코드는 이 순서로 값을 꺼낸다.
+		// 조회된 레코드가 없으면 컬럼 이름을 알 수 없으므로 헤더도 출력하지 않는다.
+		ElementCollectionValue first = (ElementCollectionValue)Funcs.getFirst(value.getFieldMap().values());
+		if ( first == null ) {
+			return;
+		}
+		List<String> columns = List.copyOf(first.getFieldMap().keySet());
 		if ( m_header ) {
-			// 헤더는 첫번째 레코드의 필드 이름들로 구성하기 때문에, 조회된 레코드가 없는 경우는
-			// 컬럼 이름을 알 수 없으므로 헤더를 출력하지 않는다.
-			ElementCollectionValue first = (ElementCollectionValue)Funcs.getFirst(value.getFieldMap().values());
-			if ( first != null ) {
-				String header = FStream.from(first.getFieldMap().keySet()).join(m_delim);
-				pw.println(header);
-			}
+			pw.println(CsvFormat.toLine(m_delim, columns));
 		}
 
 		KeyValueFStream.from(value.getFieldMap())
 						.values()
 						.cast(ElementCollectionValue.class)
-						.map(this::toRowString)
+						.map(row -> toRowString(row, columns))
 						.forEach(pw::println);
 	}
 	
-	private String toRowString(ElementCollectionValue rowValue) {
-		return FStream.from(rowValue.getFieldMap().values())
-						.map(ElementValue::toDisplayString)
-						.join(m_delim);
-		
+	private String toRowString(ElementCollectionValue rowValue, List<String> columns) {
+		Map<String,? extends ElementValue> fields = rowValue.getFieldMap();
+		List<String> cells = FStream.from(columns)
+									.map(col -> {
+										ElementValue v = fields.get(col);
+										return (v != null) ? v.toDisplayString() : "";
+									})
+									.toList();
+		return CsvFormat.toLine(m_delim, cells);
 	}
 	
 	private static final CellStyle HEADER_STYLE = new CellStyle(HorizontalAlign.CENTER);

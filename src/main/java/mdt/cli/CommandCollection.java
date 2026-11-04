@@ -18,6 +18,6 @@ public class CommandCollection implements Runnable {
 	
 	@Override
 	public void run() {
-		m_spec.commandLine().usage(System.out, Ansi.OFF);
+		m_spec.commandLine().usage(m_spec.commandLine().getOut(), Ansi.OFF);
 	}
 }

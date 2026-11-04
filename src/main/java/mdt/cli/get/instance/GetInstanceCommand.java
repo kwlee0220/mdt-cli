@@ -18,7 +18,6 @@ import utils.stream.FStream;
 import utils.func.Nullables;
 
 import mdt.cli.AbstractMDTCommand;
-import mdt.cli.IdPair;
 import mdt.client.instance.HttpMDTInstanceClient;
 import mdt.client.instance.HttpMDTInstanceManager;
 import mdt.model.AASUtils;
@@ -58,12 +57,12 @@ import picocli.CommandLine.Parameters;
 public class GetInstanceCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(GetInstanceCommand.class);
 	
-	@Parameters(index="0", paramLabel="id", arity="1..1",  description="MDTInstance id to show.")
+	@Parameters(index="0", paramLabel="instance-id", arity="1..1",  description="MDTInstance id to show.")
 	private String m_instanceId;
 
 	enum OutputTypes { table, json, env };
 	@Option(names={"--output", "-o"}, paramLabel="type", required=false,
-			description="output type (candidnates: ${COMPLETION-CANDIDATES})")
+			description="output type (candidates: ${COMPLETION-CANDIDATES}, default: ${DEFAULT-VALUE})")
 	private OutputTypes m_output = OutputTypes.table;
 
 	public static final void main(String... args) throws Exception {
@@ -100,8 +99,7 @@ public class GetInstanceCommand extends AbstractMDTCommand {
 				displayEnvironment(instance);
 				break;
 			default:
-				System.err.println("Unsupported output: " + m_output);
-				System.exit(-1);
+				throw new AssertionError("unknown output: " + m_output);
 		}
 	}
 	
@@ -112,7 +110,7 @@ public class GetInstanceCommand extends AbstractMDTCommand {
 		table.addCell(" INSTANCE "); table.addCell(" " + instance.getId());
 		
 		AssetAdministrationShellDescriptor aasDesc = instance.getAASShellDescriptor();
-		table.addCell(" AAS_ID "); table.addCell(" " + IdPair.of(aasDesc.getId(), aasDesc.getIdShort()) + " ");
+		table.addCell(" AAS_ID "); table.addCell(" " + aasDesc.getId() + " ");
 		table.addCell(" AAS_ID_ENCODED "); table.addCell(" " + AASUtils.encodeBase64UrlSafe(aasDesc.getId()) + " ");
 		table.addCell(" ID_SHORT "); table.addCell(" " + getOrEmpty(aasDesc.getIdShort()) + " ");
 		table.addCell(" GLOBAL_ASSET_ID "); table.addCell(" " + getOrEmpty(aasDesc.getGlobalAssetId()) + " ");
@@ -143,14 +141,13 @@ public class GetInstanceCommand extends AbstractMDTCommand {
 		String epStr = Nullables.orElse(instance.getServiceEndpoint(), "");
 		table.addCell(" ENDPOINT "); table.addCell(" " + epStr);
 		
-		System.out.println(table.render());
+		out().println(table.render());
 	}
 	
-	JsonSerializer SERIALIZER = MDTModelSerDe.JSON_SERIALIZER;
 	private void displayAsJson(HttpMDTInstanceClient instance) throws SerializationException, IOException {
 		InstanceDescriptor desc = instance.getInstanceDescriptor();
 		String json = MDTModelSerDe.JSON_SERIALIZER.write(desc);
-		System.out.println(json);
+		out().println(json);
 	}
 	
 	private void displayEnvironment(HttpMDTInstanceClient instance) throws SerializationException {	
@@ -166,7 +163,7 @@ public class GetInstanceCommand extends AbstractMDTCommand {
 		
 		JsonSerializer ser = new JsonSerializer();
 		String jsonStr = ser.write(env);
-		System.out.println(jsonStr);
+		out().println(jsonStr);
 	}
 	
 	private static String toDisplayName(MDTSubmodelDescriptor ismdesc) {

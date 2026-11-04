@@ -12,10 +12,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import picocli.CommandLine.Mixin;
 
+import utils.Throwables;
+
 import mdt.aas.DataType;
 import mdt.model.MDTManager;
 import mdt.model.MDTModelSerDe;
+import mdt.model.expr.MDTParserException;
 import mdt.model.instance.MDTInstanceManager;
+import mdt.model.sm.ref.ElementReferences;
+import mdt.model.sm.ref.MDTElementReference;
 import mdt.model.sm.value.ElementValue;
 import mdt.model.sm.value.ElementValues;
 import mdt.model.sm.value.PropertyValue;
@@ -65,14 +70,41 @@ public abstract class AbstractRunTaskCommand extends DynamicArgumentsCommand {
 											m_runOptions.getTimeout());
 
 		Map<String,SubmodelElement> outputs = task.run(manager);
-		if ( m_runOptions.getShowResult() ) {
+		if ( m_runOptions.isShowResult() ) {
 			for ( Map.Entry<String,SubmodelElement> e: outputs.entrySet() ) {
-				System.out.printf("%s: %s%n", e.getKey(), ElementValues.getValue(e.getValue()).toDisplayString());
+				ElementValue value = ElementValues.getValue(e.getValue());
+				out().printf("%s: %s%n", e.getKey(), (value != null) ? value.toDisplayString() : "(none)");
 			}
 		}
 
 		Duration elapsed = Duration.between(started, Instant.now());
 		getLogger().info("{}, elapsedTime={}", getTargetString(), elapsed);
+	}
+
+	/**
+	 * 명령줄의 입력 인자 값을 {@link TaskArgument}로 바꾼다.
+	 * <p>
+	 * 값이 요소 참조 표현식이면 참조 인자가 되고, 그렇지 않으면 대상 변수의 타입에 맞는 리터럴로 해석한다
+	 * ({@link #parseLiteralArgument(SubmodelElement, String)}).
+	 *
+	 * @param argSme	값을 해석할 기준이 되는 인자 변수의 {@link SubmodelElement}.
+	 * @param argSpec	명령줄에 주어진 인자 값.
+	 * @return	변환된 태스크 인자.
+	 */
+	protected static TaskArgument toInputTaskArgument(SubmodelElement argSme, String argSpec) {
+		try {
+			MDTElementReference ref = ElementReferences.parseExpr(argSpec);
+			return TaskArgument.reference(ref);
+		}
+		catch ( MDTParserException notReference ) {
+			// 참조 표현식이 아닌 경우는 인자 변수의 타입에 맞는 리터럴로 해석한다.
+			try {
+				return parseLiteralArgument(argSme, argSpec);
+			}
+			catch ( IOException e ) {
+				return Throwables.sneakyThrow(e);
+			}
+		}
 	}
 
 	/**

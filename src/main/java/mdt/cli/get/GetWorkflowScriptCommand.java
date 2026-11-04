@@ -50,6 +50,6 @@ public class GetWorkflowScriptCommand extends AbstractMDTCommand {
 		HttpWorkflowManager wfMgr = (HttpWorkflowManager)mdt.getWorkflowManager();
 		
 		String script = wfMgr.getWorkflowScript(m_parent.getWorkflowModelId());
-		System.out.println(script);
+		out().println(script);
 	}
 }

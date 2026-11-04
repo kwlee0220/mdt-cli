@@ -34,12 +34,14 @@ import picocli.CommandLine.Parameters;
 public class GetWorkflowModelCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(GetWorkflowModelCommand.class);
 	
-	@Parameters(index="0", paramLabel="wfmodel_id", description="Workflow id to get")
+	@Parameters(index="0", paramLabel="model-id", description="Workflow model id to get")
 	private String m_wfModelId;
 	
-	@Option(names={"--output", "-o"}, paramLabel="type", required=false,
-			description="output type (candidnates: table (default) or json)")
-	private String m_output = "table";
+	/** {@code --output} 값. */
+	enum OutputType { table, json };
+	@Option(names={"--output", "-o"}, paramLabel="type",
+			description="output type (candidates: ${COMPLETION-CANDIDATES}, default: ${DEFAULT-VALUE})")
+	private OutputType m_output = OutputType.table;
 
 	public static final void main(String... args) throws Exception {
 		main(new GetWorkflowModelCommand(), args);
@@ -59,14 +61,14 @@ public class GetWorkflowModelCommand extends AbstractMDTCommand {
 		
 		WorkflowModel wfModel = wfMgr.getWorkflowModel(m_wfModelId);
 		switch ( m_output ) {
-			case "table":
+			case table:
 				displayAsTable(wfModel);
 				break;
-			case "json":
+			case json:
 				displayAsJson(wfModel);
 				break;
 			default:
-				throw new IllegalArgumentException("invalid output type: " + m_output);
+				throw new AssertionError("unknown output: " + m_output);
 		}
 	}
 	
@@ -85,10 +87,10 @@ public class GetWorkflowModelCommand extends AbstractMDTCommand {
 			table.addCell(" " + task.toSignatureString());
 		});
 		
-		System.out.println(table.render());
+		out().println(table.render());
 	}
 	
 	private void displayAsJson(WorkflowModel wfModel) {
-		System.out.println(wfModel.toJsonString());
+		out().println(wfModel.toJsonString());
 	}
 }

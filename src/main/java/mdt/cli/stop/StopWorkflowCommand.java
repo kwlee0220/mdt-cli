@@ -24,8 +24,8 @@ import picocli.CommandLine.Parameters;
 public class StopWorkflowCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(StopWorkflowCommand.class);
 	
-	@Parameters(index="0", paramLabel="wf-id", description="Workflow instance id to stop")
-	private String m_wfId;
+	@Parameters(index="0", paramLabel="workflow-name", description="Workflow instance name to stop")
+	private String m_wfName;
 
 	public static final void main(String... args) throws Exception {
 		main(new StopWorkflowCommand(), args);
@@ -39,6 +39,6 @@ public class StopWorkflowCommand extends AbstractMDTCommand {
 	public void run(MDTManager mdt) throws Exception {
 		WorkflowManager wfMgr = mdt.getWorkflowManager();
 		
-		wfMgr.stopWorkflow(m_wfId);
+		wfMgr.stopWorkflow(m_wfName);
 	}
 }

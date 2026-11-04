@@ -1,11 +1,9 @@
 package mdt.cli.run;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 
 import org.eclipse.digitaltwin.aas4j.v3.model.Submodel;
-import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,17 +11,14 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
 import utils.KeyValue;
-import utils.Throwables;
 import utils.stream.KeyValueFStream;
 
 import mdt.cli.RefExprs;
-import mdt.model.expr.MDTParserException;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.SubmodelUtils;
 import mdt.model.sm.SubmodelUtils.OperationSubmodelDescriptor;
 import mdt.model.sm.ref.DefaultSubmodelReference;
 import mdt.model.sm.ref.ElementReferences;
-import mdt.model.sm.ref.MDTElementReference;
 import mdt.task.AbstractOperationTask;
 import mdt.task.OperationSubmodelTask;
 import mdt.task.TaskArgument;
@@ -51,7 +46,7 @@ import mdt.task.TaskArgument.ReferenceArgument;
 public class RunOperationSubmodelCommand extends AbstractRunTaskCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(RunOperationSubmodelCommand.class);
 
-	@Parameters(index="0", paramLabel="id", description="MDTInstance id.")
+	@Parameters(index="0", paramLabel="instance-id", description="MDTInstance id.")
 	private String m_instanceId;
 
 	@Parameters(index="1", paramLabel="submodel-idShort",
@@ -63,12 +58,12 @@ public class RunOperationSubmodelCommand extends AbstractRunTaskCommand {
 	}
 
 	@Override
-	protected AbstractOperationTask newTask(MDTInstanceManager manager, TaskCommandArguments tad,
+	protected AbstractOperationTask newTask(MDTInstanceManager manager, TaskCommandArguments cmdArgs,
 											Duration pollInterval, Duration timeout) {
 		// OperationSubmodelTask는 inoutput argument를 지원하지 않으므로,
 		// inoutput argument가 지정된 경우 오류를 발생시킨다.
-		if ( tad.getInoutputs().size() > 0 ) {
-			throw new IllegalArgumentException("inoutput argument is not supported for OperationSubmodelTask");
+		if ( cmdArgs.getInoutputs().size() > 0 ) {
+			throw usageError("inoutput argument is not supported for OperationSubmodelTask");
 		}
 
 		String smRefStr = RefExprs.submodelRef(m_instanceId, m_submodelIdShort);
@@ -79,8 +74,8 @@ public class RunOperationSubmodelCommand extends AbstractRunTaskCommand {
 		Submodel opSubmodel = smRef.get().getSubmodel();
 		OperationSubmodelDescriptor opSmDesc = SubmodelUtils.loadOperationSubmodelDescriptor(opSubmodel);
 
-		Map<String,TaskArgument> inputTaskArgs = loadInputTaskArguments(opSmDesc, tad);
-		Map<String,ReferenceArgument> outputTaskArgs = loadOutputTaskArguments(opSmDesc, tad);
+		Map<String,TaskArgument> inputTaskArgs = loadInputTaskArguments(opSmDesc, cmdArgs);
+		Map<String,ReferenceArgument> outputTaskArgs = loadOutputTaskArguments(opSmDesc, cmdArgs);
 
 		return OperationSubmodelTask.builder()
 									.submodelReference(smRef)
@@ -103,24 +98,7 @@ public class RunOperationSubmodelCommand extends AbstractRunTaskCommand {
 
 		return KeyValueFStream.from(smDesc.getInputs())
 								.match(cmdArgs.getInputs())
-								.mapKeyValue((argId, match) -> {
-									SubmodelElement argSme = match._1.getSubmodelElement();
-									String argSpec = match._2;
-
-									try {
-										MDTElementReference ref = ElementReferences.parseExpr(argSpec);
-										return KeyValue.of(argId, TaskArgument.reference(ref));
-									}
-									catch ( MDTParserException expected ) {
-										// 참조 표현식이 아닌 경우는 인자 타입에 맞는 리터럴로 해석한다.
-										try {
-											return KeyValue.of(argId, parseLiteralArgument(argSme, argSpec));
-										}
-										catch ( IOException e ) {
-											return Throwables.sneakyThrow(e);
-										}
-									}
-								})
+								.mapKeyValue((argId, match) -> KeyValue.of(argId, toInputTaskArgument(match._1.getSubmodelElement(), match._2)))
 								.toMap();
 	}
 
@@ -138,6 +116,5 @@ public class RunOperationSubmodelCommand extends AbstractRunTaskCommand {
 
 	public static void main(String... args) throws Exception {
 		main(new RunOperationSubmodelCommand(), args);
-		System.exit(0);
 	}
 }

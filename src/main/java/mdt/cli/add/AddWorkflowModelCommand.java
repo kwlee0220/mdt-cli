@@ -8,15 +8,12 @@ import org.slf4j.LoggerFactory;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.MDTManager;
 import mdt.model.ResourceAlreadyExistsException;
-import mdt.model.ResourceNotFoundException;
 import mdt.workflow.WorkflowManager;
 import mdt.workflow.WorkflowModel;
 
@@ -24,7 +21,7 @@ import mdt.workflow.WorkflowModel;
  * 워크플로우 모델 정의를 담은 JSON 파일을 읽어 MDT 시스템에 등록하는 CLI 명령({@code wfmodel}).
  * <p>
  * 동일한 ID의 모델이 이미 등록되어 있는 경우 기본적으로 사용자에게 명확한 메시지와 함께 종료한다.
- * {@code --force}/{@code -f}를 지정하면 기존 모델을 먼저 삭제한 뒤 새 모델을 등록한다(덮어쓰기).
+ * {@code --force}/{@code -f}를 지정하면 같은 id의 기존 모델을 서버에서 한 번에 교체한다(덮어쓰기).
  *
  * @author Kang-Woo Lee (ETRI)
  */
@@ -42,8 +39,6 @@ public class AddWorkflowModelCommand extends AbstractMDTCommand {
 	 * picocli가 주입하는 이 명령의 {@link CommandSpec}. 사용자 친화적 오류 메시지를 생성하기 위해
 	 * {@link CommandLine}을 얻을 때 사용한다.
 	 */
-	@Spec private CommandSpec m_spec;
-
 	/** 등록할 워크플로우 모델이 정의된 JSON 파일 경로. 필수 인자. */
 	@Parameters(index="0", arity="1", paramLabel="path",
 				description="Path to the workflow model JSON file to register")
@@ -75,18 +70,21 @@ public class AddWorkflowModelCommand extends AbstractMDTCommand {
 
 	/**
 	 * 명령 본체. 입력 JSON 파일을 검증·파싱하여 {@link WorkflowModel}을 만든 뒤
-	 * {@link WorkflowManager#addWorkflowModel(WorkflowModel)}로 등록한다. 충돌 발생 시
-	 * {@code --force} 정책에 따라 기존 모델을 삭제하고 한 번 재시도한다.
+	 * {@link WorkflowManager#addWorkflowModel(WorkflowModel)}로 등록한다. {@code --force}이면
+	 * {@link WorkflowManager#addOrReplaceWorkflowModel(WorkflowModel)}로 기존 모델을 한 번에 교체한다.
 	 *
 	 * @param mdt 부모 클래스가 접속을 완료한 {@link MDTManager}.
-	 * @throws CommandLine.ParameterException 파일 접근 불가, JSON 파싱 실패, 충돌 모델 존재 시
-	 *                                        {@code --force} 미지정, 또는 덮어쓰기 중 기존 모델 삭제 실패,
-	 *                                        또는 덮어쓰기 직후 동시 충돌(race condition).
+	 * @throws CommandLine.ParameterException 파일 접근 불가, JSON 파싱 실패, 또는 {@code --force} 없이
+	 *                                        같은 id의 모델이 이미 있는 경우.
 	 * @throws Exception 그 외 등록 중 발생한 예외.
 	 */
 	@Override
-	public void run(MDTManager mdt) throws Exception {
+	protected void validate() {
 		validateInputFile();
+	}
+
+	@Override
+	public void run(MDTManager mdt) throws Exception {
 
 		getLogger().debug("parsing workflow model file: {}", m_file.getAbsolutePath());
 		WorkflowModel wfDesc;
@@ -94,38 +92,22 @@ public class AddWorkflowModelCommand extends AbstractMDTCommand {
 			wfDesc = WorkflowModel.parseJsonFile(m_file);
 		}
 		catch ( IOException e ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"Failed to parse workflow model JSON: " + m_file.getAbsolutePath()
+			throw usageError("Failed to parse workflow model JSON: " + m_file.getAbsolutePath()
 					+ ", cause=" + e.getMessage());
 		}
 
 		WorkflowManager wfMgr = mdt.getWorkflowManager();
-		getLogger().debug("adding workflow model: id={}", wfDesc.getId());
+		getLogger().debug("adding workflow model: id={}, force={}", wfDesc.getId(), m_force);
+		if ( m_force ) {
+			// 서버가 한 번의 요청으로 교체하므로, 삭제 후 재등록처럼 중간에 실패해 기존 모델을 잃는 일이 없다.
+			wfMgr.addOrReplaceWorkflowModel(wfDesc);
+			return;
+		}
 		try {
 			wfMgr.addWorkflowModel(wfDesc);
 		}
 		catch ( ResourceAlreadyExistsException e ) {
-			if ( !m_force ) {
-				throw new CommandLine.ParameterException(getCommandLine(),
-						"Workflow model already exists: " + wfDesc.getId() + ". Use --force to overwrite.");
-			}
-			getLogger().debug("overwrite requested; removing existing workflow model: id={}", wfDesc.getId());
-			try {
-				wfMgr.removeWorkflowModel(wfDesc.getId());
-			}
-			catch ( ResourceNotFoundException rmErr ) {
-				throw new CommandLine.ParameterException(getCommandLine(),
-						"Failed to remove existing workflow model for overwrite: "
-						+ wfDesc.getId() + ", cause=" + rmErr.getMessage());
-			}
-			getLogger().debug("retrying addWorkflowModel after remove: id={}", wfDesc.getId());
-			try {
-				wfMgr.addWorkflowModel(wfDesc);
-			}
-			catch ( ResourceAlreadyExistsException retry ) {
-				throw new CommandLine.ParameterException(getCommandLine(),
-						"Workflow model was re-created concurrently during overwrite: " + wfDesc.getId());
-			}
+			throw usageError("Workflow model already exists: " + wfDesc.getId() + ". Use --force to overwrite.");
 		}
 	}
 
@@ -142,26 +124,14 @@ public class AddWorkflowModelCommand extends AbstractMDTCommand {
 	 */
 	private void validateInputFile() {
 		if ( !m_file.exists() ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"File not found: " + m_file.getAbsolutePath());
+			throw usageError("File not found: " + m_file.getAbsolutePath());
 		}
 		if ( !m_file.isFile() ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"Not a regular file: " + m_file.getAbsolutePath());
+			throw usageError("Not a regular file: " + m_file.getAbsolutePath());
 		}
 		if ( !m_file.canRead() ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"Cannot read file: " + m_file.getAbsolutePath());
+			throw usageError("Cannot read file: " + m_file.getAbsolutePath());
 		}
 	}
 
-	/**
-	 * 검증 메시지 발생용 {@link CommandLine}을 반환한다. picocli가 정상적으로 파싱한 경우 주입된
-	 * {@link #m_spec}에서 가져오고, 그렇지 않으면 새로 생성한 인스턴스를 사용한다.
-	 *
-	 * @return 이 명령에 연결된 {@link CommandLine}.
-	 */
-	private CommandLine getCommandLine() {
-		return (m_spec != null) ? m_spec.commandLine() : new CommandLine(this);
-	}
 }

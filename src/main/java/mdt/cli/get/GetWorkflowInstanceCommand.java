@@ -30,7 +30,7 @@ import picocli.CommandLine.Parameters;
 	parameterListHeading = "Parameters:%n",
 	optionListHeading = "Options:%n",
 	mixinStandardHelpOptions = true,
-	description = "Get an MDT Workflow instance (or model).",
+	description = "Get an MDT Workflow instance.",
 	subcommands = {
 		GetWorkflowLogCommand.class
 	}
@@ -38,12 +38,14 @@ import picocli.CommandLine.Parameters;
 public class GetWorkflowInstanceCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(GetWorkflowInstanceCommand.class);
 	
-	@Parameters(index="0", paramLabel="id", description="Workflow id to get")
-	private String m_id;
+	@Parameters(index="0", paramLabel="workflow-name", description="Workflow instance name to get")
+	private String m_wfName;
 	
-	@Option(names={"--output", "-o"}, paramLabel="type", required=false,
-			description="output type (candidnates: table (default) or json)")
-	private String m_output = "table";
+	/** {@code --output} 값. */
+	enum OutputType { table, json };
+	@Option(names={"--output", "-o"}, paramLabel="type",
+			description="output type (candidates: ${COMPLETION-CANDIDATES}, default: ${DEFAULT-VALUE})")
+	private OutputType m_output = OutputType.table;
 
 	public static final void main(String... args) throws Exception {
 		main(new GetWorkflowInstanceCommand(), args);
@@ -53,24 +55,24 @@ public class GetWorkflowInstanceCommand extends AbstractMDTCommand {
 		setLogger(s_logger);
 	}
 	
-	public String getWorkflowModelId() {
-		return m_id;
+	public String getWorkflowName() {
+		return m_wfName;
 	}
 
 	@Override
 	public void run(MDTManager mdt) throws Exception {
 		WorkflowManager wfMgr = mdt.getWorkflowManager();
 		
-		Workflow workflow = wfMgr.getWorkflow(m_id);
+		Workflow workflow = wfMgr.getWorkflow(m_wfName);
 		switch (m_output) {
-			case "table":
+			case table:
 				displayAsTable(workflow);
 				break;
-			case "json":
+			case json:
 				displayAsJson(workflow);
 				break;
 			default:
-				throw new IllegalArgumentException("invalid output type: " + m_output);
+				throw new AssertionError("unknown output: " + m_output);
 		}
 	}
 	
@@ -95,11 +97,11 @@ public class GetWorkflowInstanceCommand extends AbstractMDTCommand {
 			table.addCell(msg);
 		});
 		
-		System.out.println(table.render());
+		out().println(table.render());
 	}
 	
 	private void displayAsJson(Workflow workflow) throws JsonProcessingException {
 		JsonMapper mapper = MDTModelSerDe.getJsonMapper();
-		System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(workflow));
+		out().println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(workflow));
 	}
 }

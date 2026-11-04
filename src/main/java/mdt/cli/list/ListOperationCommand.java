@@ -1,19 +1,16 @@
 package mdt.cli.list;
 
 import java.io.PrintWriter;
-import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CancellationException;
 
 import org.nocrala.tools.texttablefmt.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import utils.UnitUtils;
 import utils.stream.FStream;
 
 import mdt.cli.AbstractMDTCommand;
-import mdt.cli.PeriodicRefreshingConsole;
+import mdt.cli.RepeatOptions;
 import mdt.cli.list.ListCommands.CSVCollector;
 import mdt.cli.list.ListCommands.ListCollector;
 import mdt.cli.list.ListCommands.TableCollector;
@@ -23,6 +20,7 @@ import mdt.model.instance.MDTInstanceManager;
 import mdt.model.instance.MDTOperationDescriptor;
 
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
 /**
@@ -43,16 +41,13 @@ public class ListOperationCommand extends AbstractMDTCommand {
 	@Option(names={"--filter", "-f"}, paramLabel="filter-expr", description="instance filter.")
 	private String m_filter = null;
 	
-	@Option(names={"--table", "-t"}, description="'table' format output")
-	private boolean m_table = false; 
+	@Mixin private ListOutputOptions m_outputOpts;
 
 	@Option(names={"--delimiter", "-d"}, paramLabel="delimiter",
 					description="delimiter (for 'simple' output only)")
 	private String m_delimiter = ListCommands.DELIM;
 
-	@Option(names={"--repeat", "-r"}, paramLabel="interval",
-			description="repeat interval (e.g. \"1s\", \"500ms\")")
-	private String m_repeat = null;
+	@Mixin private RepeatOptions m_repeatOpts;
 	
 	@Option(names={"-v"}, description="verbose")
 	private boolean m_verbose = false;
@@ -65,31 +60,7 @@ public class ListOperationCommand extends AbstractMDTCommand {
 	public void run(MDTManager mdt) throws Exception {
 		MDTInstanceManager manager = mdt.getInstanceManager();
 
-		if ( m_repeat == null ) {
-			try ( PrintWriter pw = newStdoutWriter() ) {
-				printOutput(manager, pw);
-			}
-			return;
-		}
-		else {
-			Duration repeatInterval = UnitUtils.parseDuration(m_repeat);
-			PeriodicRefreshingConsole pwriter = new PeriodicRefreshingConsole(repeatInterval) {
-				@Override
-				protected void print(PrintWriter pw) {
-					try {
-						printOutput(manager, pw);
-					}
-					catch ( Exception ignored ) {
-						pw.println("failed to list Operations: cause=" + ignored);
-					}
-				}
-			};
-			pwriter.setVerbose(m_verbose);
-			try {
-				pwriter.run();
-			}
-			catch ( CancellationException | InterruptedException e ) { }
-		}
+		m_repeatOpts.run(pw -> printOutput(manager, pw), "list Operations", m_verbose);
 	}
 	
 	private void printOutput(MDTInstanceManager manager, PrintWriter pw) {
@@ -97,7 +68,7 @@ public class ListOperationCommand extends AbstractMDTCommand {
 												? manager.getInstanceAllByFilter(m_filter)
 												: manager.getInstanceAll();
 		
-		String listStr = (m_table) ? buildTableString(instances) + System.lineSeparator()
+		String listStr = (m_outputOpts.isTable()) ? buildTableString(instances) + System.lineSeparator()
 									: buildCsvString(instances);
 		pw.print(listStr);
 	}

@@ -36,7 +36,7 @@ public class GetInstanceLogCommand extends AbstractMDTCommand {
 		HttpMDTInstanceManager manager = (HttpMDTInstanceManager)mdt.getInstanceManager();
 		HttpMDTInstanceClient instance = manager.getInstance(m_parent.getInstanceId());
 
-		System.out.print(instance.getOutputLog());
+		out().print(instance.getOutputLog());
 	}
 
 	public static final void main(String... args) throws Exception {

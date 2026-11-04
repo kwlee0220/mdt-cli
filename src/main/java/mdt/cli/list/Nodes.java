@@ -22,8 +22,6 @@ public final class Nodes {
 		throw new AssertionError("Should not be called: class=" + Nodes.class.getName());
 	}
 	
-	static boolean s_showEndpoint = false;
-	
 	static class RootNode implements Node {
 		final Map<MDTInstanceStatus,StatusGroupNode> m_statusGroupNodes = Maps.newLinkedHashMap();
 		
@@ -107,10 +105,18 @@ public final class Nodes {
 		private final HttpMDTInstanceClient m_instance;
 		private final MDTInstanceStatus m_status;
 		private final String m_baseUrl;
+		private final boolean m_showEndpoint;
 		private final KeyedValueList<String, InstanceNode> m_children;
 		
-		public InstanceNode(HttpMDTInstanceClient instance) {
+		/**
+		 * 인스턴스 노드를 만든다.
+		 *
+		 * @param instance		대상 인스턴스.
+		 * @param showEndpoint	실행 중인 인스턴스의 서비스 endpoint를 함께 표시할지 여부.
+		 */
+		public InstanceNode(HttpMDTInstanceClient instance, boolean showEndpoint) {
 			m_instance = instance;
+			m_showEndpoint = showEndpoint;
 			m_status = instance.getStatus();
 			m_baseUrl = (m_status == MDTInstanceStatus.RUNNING) ? m_instance.getServiceEndpoint() : null;
 			m_children = KeyedValueList.with(Node::getKey);
@@ -135,7 +141,7 @@ public final class Nodes {
 		
 		@Override
 		public String getText() {
-			String urlStr = ( s_showEndpoint && m_baseUrl != null)
+			String urlStr = ( m_showEndpoint && m_baseUrl != null )
 							? String.format(" (%s)", m_baseUrl) : "";
 			return m_instance.getId() + urlStr;
 		}

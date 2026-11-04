@@ -10,7 +10,6 @@ import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import utils.UnitUtils;
 import utils.func.Funcs;
 
 import mdt.aas.SubmodelRegistry;
@@ -43,31 +42,31 @@ import picocli.CommandLine.Parameters;
 )
 public class StartSkkuSimulationCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(StartSkkuSimulationCommand.class);
-	private static final Duration DEFAULT_POLL_TIMEOUT = Duration.ofSeconds(3);
+	private static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(3);
 	
-	@Parameters(index="0", paramLabel="id", description="target Simulation Submodel (or MDTInstance) id")
+	@Parameters(index="0", paramLabel="instance-id|submodel-id", description="target MDTInstance id or Simulation Submodel id")
 	private String m_targetId;
 
-	@Option(names={"--use_endpoint", "-e"},
+	@Option(names={"--use-endpoint", "-e"},
 			description="Invoke simulation with Simulation submodel service endpoint")
 	private boolean m_useEndpoint;
+	/** 이전 옵션 이름 {@code --use_endpoint}(도움말에는 표시하지 않는다). */
+	@Option(names={"--use_endpoint"}, hidden=true)
+	private void setUseEndpointAlias(boolean useEndpoint) {
+		m_useEndpoint = useEndpoint;
+	}
 
 	@Option(names={"--nowait"}, paramLabel="duration",
 			description="Do not wait until the instance gets to running")
 	private boolean m_nowait = false;
 
-	private Duration m_pollInterval = DEFAULT_POLL_TIMEOUT;
-	@Option(names={"--poll"}, paramLabel="duration", description="Status polling interval (e.g. \"5s\", \"500ms\"")
-	public void setPollInterval(String intervalStr) {
-		m_pollInterval = UnitUtils.parseDuration(intervalStr);
-	}
+	@Option(names={"--poll"}, paramLabel="duration",
+			description="Status polling interval (e.g. \"5s\", \"500ms\", default: 3s)")
+	private Duration m_pollInterval = DEFAULT_POLL_INTERVAL;
 
-	private Duration m_timeout = null;
 	@Option(names={"--timeout", "-t"}, paramLabel="duration",
-			description="Simulation timeout (e.g. \"30s\", \"5m\"")
-	public void setTimeout(String timeoutStr) {
-		m_timeout = UnitUtils.parseDuration(timeoutStr);
-	}
+			description="Simulation timeout (e.g. \"30s\", \"5m\", default: none)")
+	private Duration m_timeout = null;
 	
 	@Option(names={"-v"}, description="verbose")
 	private boolean m_verbose = false;
@@ -91,8 +90,9 @@ public class StartSkkuSimulationCommand extends AbstractMDTCommand {
 		try {
 			simulationSubmodelDesc = registry.getSubmodelDescriptorById(m_targetId);
 			if ( !Simulation.SEMANTIC_ID_REFERENCE.equals(simulationSubmodelDesc.getSemanticId()) ) {
-				System.err.printf("The target Submodel(%s) is not a Simulation%n", m_targetId);
-				System.exit(-1);
+				err().printf("The target Submodel(%s) is not a Simulation%n", m_targetId);
+				markFailed();
+				return;
 			}
 		}
 		catch ( ResourceNotFoundException expected ) {
@@ -104,17 +104,19 @@ public class StartSkkuSimulationCommand extends AbstractMDTCommand {
 					= Funcs.filter(inst.getAASSubmodelDescriptorAll(),
 									desc -> Simulation.SEMANTIC_ID_REFERENCE.equals(desc.getSemanticId()));
 			if ( simulations.size() == 0 ) {
-				System.err.printf("Invalid Simulation Submodel id: %s%n", m_targetId);
-				System.exit(-1);
+				err().printf("Invalid Simulation Submodel id: %s%n", m_targetId);
+				markFailed();
+				return;
 			}
 			simulationSubmodelDesc = simulations.get(0);
 		}
 		
 		String simulationSubmodelEndpoint = DescriptorUtils.getEndpointString(simulationSubmodelDesc.getEndpoints());
 		if ( simulationSubmodelEndpoint == null ) {
-			System.err.printf("Target Simulation is not ready to run. Submodel id: %s%n",
+			err().printf("Target Simulation is not ready to run. Submodel id: %s%n",
 								simulationSubmodelDesc.getId());
-			System.exit(-1);
+			markFailed();
+			return;
 		}
 		HttpSubmodelServiceClient svc = HttpSubmodelServiceClient.newTrustAllSubmodelServiceClient(simulationSubmodelEndpoint);
 		
@@ -123,8 +125,9 @@ public class StartSkkuSimulationCommand extends AbstractMDTCommand {
 																Simulation.IDSHORT_PATH_ENDPOINT,
 																String.class);
 		if ( endpoint == null || endpoint.trim().length() == 0 ) {
-			System.err.printf("Simulator Endpoint is missing: submodel-id=%s%n", simulation.getId());
-			System.exit(-1);
+			err().printf("Simulator Endpoint is missing: submodel-id=%s%n", simulation.getId());
+			markFailed();
+			return;
 		}
 		
 		HttpSimulationClient simClient = new HttpSimulationClient(client.getHttpClient(), endpoint);
@@ -139,45 +142,46 @@ public class StartSkkuSimulationCommand extends AbstractMDTCommand {
 			String loc = resp.getOperationLocation();
 			String handleStr = (loc != null) ? String.format(", url=%s/%s", endpoint, loc) : "";
 			String msg = (resp.getMessage() != null) ? String.format(", message=%s", resp.getMessage()) : "";
-			System.out.printf("Starting a simulation: id=%s%s, status=%s%s%n",
+			out().printf("Starting a simulation: id=%s%s, status=%s%s%n",
 							m_targetId, handleStr, resp.getStatus(), msg);
-			System.exit(0);
+			return;
 		}
 		
 //		String opHandle = "ProcessOptimization";
 		String opHandle = resp.getOperationLocation();
 		while ( resp.getStatus() == OperationStatus.RUNNING ) {
 			if ( m_verbose ) {
-				System.out.print(".");
+				out().print(".");
 			}
 			TimeUnit.MILLISECONDS.sleep(m_pollInterval.toMillis());
 			
 			resp = simClient.statusSimulation(opHandle);
 			if ( m_timeout != null && resp.getStatus() == OperationStatus.RUNNING ) {
 				if ( m_timeout.minus(Duration.between(started, Instant.now())).isNegative() ) {
-					System.out.println();
+					out().println();
 					simClient.cancelSimulation(opHandle);
 					
-					System.out.printf("Simulation is cancelled: id=%s, cause=%s%n",
+					// 시간 초과로 취소한 것이므로 실패로 끝낸다.
+					err().printf("Simulation is cancelled by timeout: id=%s, cause=%s%n",
 										m_targetId, resp.getMessage());
-					System.exit(0);
+					markFailed();
+					return;
 				}
 			}
 		}
-		System.out.println();
+		out().println();
 		
 		switch ( resp.getStatus() ) {
 			case COMPLETED:
-				System.out.printf("Simulation completes: id=%s%n", m_targetId);
-				System.exit(0);
+				out().printf("Simulation completes: id=%s%n", m_targetId);
 				break;
 			case FAILED:
-				System.out.printf("Simulation is failed: id=%s, cause=%s%n", m_targetId, resp.getMessage());
-				System.exit(-1);
+				out().printf("Simulation is failed: id=%s, cause=%s%n", m_targetId, resp.getMessage());
+				markFailed();
 				break;
 			case CANCELLED:
-				System.out.printf("Simulation is cancelled: id=%s, cause=%s%n", m_targetId, resp.getMessage());
-				System.exit(-1);
+				out().printf("Simulation is cancelled: id=%s, cause=%s%n", m_targetId, resp.getMessage());
+				markFailed();
 				break;
 			default:
 				throw new AssertionError();

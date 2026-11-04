@@ -60,7 +60,7 @@ public abstract class DynamicArgumentsCommand extends AbstractMDTCommand {
 	private CommandSpec m_spec;
 
 	@Unmatched()
-	private List<String> m_unmatcheds = Lists.newArrayList();
+	private List<String> m_unmatchedArgs = Lists.newArrayList();
 
 	protected DynamicArgumentsCommand() {
 		setLogger(s_logger);
@@ -81,13 +81,13 @@ public abstract class DynamicArgumentsCommand extends AbstractMDTCommand {
 	}
 
 	protected List<UnmatchedOption> collectUnmatchedOptions() {
-		getLogger().debug("unmatched options: {}", m_unmatcheds);
+		getLogger().debug("unmatched options: {}", m_unmatchedArgs);
 
 		// 값이 별도 토큰으로 분리된 '--in.<name> <value>' 형식에서는 값 토큰이 picocli의 위치 인자로
 		// 소비되었을 수 있기 때문에, unmatched 토큰만으로는 값이 온전한지 알 수 없다.
 		// 따라서 원본 command line을 기준으로 unmatched 토큰의 위치를 확인한다.
 		List<String> originalArgs = getOriginalArgs();
-		return parseUnmatchedOptions((originalArgs != null) ? originalArgs : m_unmatcheds, m_unmatcheds);
+		return parseUnmatchedOptions((originalArgs != null) ? originalArgs : m_unmatchedArgs, m_unmatchedArgs);
 	}
 
 	/**
@@ -198,9 +198,10 @@ public abstract class DynamicArgumentsCommand extends AbstractMDTCommand {
 	 * Command line에서 수집된 태스크의 input/output/inoutput 인자 명세.
 	 */
 	public static class TaskCommandArguments {
-		private final Map<String,String> m_inputs = Maps.newHashMap();
-		private final Map<String,String> m_outputs = Maps.newHashMap();
-		private final Map<String,String> m_inoutputs = Maps.newHashMap();
+		// 명령줄에 지정한 순서를 유지한다.
+		private final Map<String,String> m_inputs = Maps.newLinkedHashMap();
+		private final Map<String,String> m_outputs = Maps.newLinkedHashMap();
+		private final Map<String,String> m_inoutputs = Maps.newLinkedHashMap();
 
 		public Map<String,String> getInputs() {
 			return m_inputs;
@@ -229,33 +230,46 @@ public abstract class DynamicArgumentsCommand extends AbstractMDTCommand {
 
 	/**
 	 * Command line에서 지정된 옵션을 파싱하여 태스크의 input/output/inoutput 인자를 수집한다.
+	 * <p>
+	 * 인자는 {@code --in.<name>}, {@code --out.<name>}, {@code --inout.<name>} 형식이며, 종류를 생략한
+	 * {@code --<name>}은 입력 인자로 본다. 같은 종류·이름의 인자를 두 번 지정하면 사용법 오류다.
 	 *
 	 * @return	수집된 태스크 인자 명세.
 	 * @throws IOException				인자 값을 해석하는 과정에서 오류가 발생한 경우.
-	 * @throws IllegalArgumentException	인자 형식이 잘못되었거나 인자 값이 지정되지 않은 경우.
+	 * @throws CommandLine.ParameterException	인자 값이 지정되지 않았거나 같은 인자가 두 번 지정된 경우.
+	 * @throws IllegalArgumentException	인자 형식이 잘못된 경우.
 	 */
 	protected TaskCommandArguments loadTaskArgumentsFromCommandLine()
 		throws IOException {
-		TaskCommandArguments varsDesc = new TaskCommandArguments();
+		TaskCommandArguments args = new TaskCommandArguments();
 		List<UnmatchedOption> unmatchedOptions = collectUnmatchedOptions();
 		for ( UnmatchedOption unmatchedOpt: unmatchedOptions ) {
 			String name = unmatchedOpt.getName();
 			String argSpec = unmatchedOpt.getValue();
 			if ( argSpec == null ) {
-				throw new IllegalArgumentException("argument value is not specified: arg=" + name);
+				throw usageError("argument value is not specified: arg=" + name);
 			}
 
 			// 인자 종류는 toUnmatchedOption()에서 ARGUMENT_KINDS 중 하나로 결정된다.
 			String kind = unmatchedOpt.getType();
+			Map<String,String> existing = switch ( kind ) {
+				case KIND_INPUT -> args.getInputs();
+				case KIND_OUTPUT -> args.getOutputs();
+				case KIND_INOUTPUT -> args.getInoutputs();
+				default -> throw new AssertionError("unexpected argument kind: " + kind);
+			};
+			if ( existing.containsKey(name) ) {
+				throw usageError(String.format("duplicate %s argument: --%s.%s", kind, kind, name));
+			}
 			switch ( kind ) {
 				case KIND_INPUT:
-					varsDesc.addInput(name, argSpec);
+					args.addInput(name, argSpec);
 					break;
 				case KIND_OUTPUT:
-					varsDesc.addOutput(name, argSpec);
+					args.addOutput(name, argSpec);
 					break;
 				case KIND_INOUTPUT:
-					varsDesc.addInoutput(name, argSpec);
+					args.addInoutput(name, argSpec);
 					break;
 				default:
 					throw new AssertionError("unexpected argument kind: " + kind);
@@ -263,7 +277,7 @@ public abstract class DynamicArgumentsCommand extends AbstractMDTCommand {
 			getLogger().debug("add {} argument variable[{}]", kind, name);
 		}
 
-		return varsDesc;
+		return args;
 	}
 
 	/**
@@ -275,15 +289,15 @@ public abstract class DynamicArgumentsCommand extends AbstractMDTCommand {
 	 * @param kind		인자 종류. 오류 메시지에만 사용된다. (예: {@code "input"})
 	 * @param cmdArgs	명령행에서 지정된 인자 명세. (인자 이름 -&gt; 인자 표현식)
 	 * @param varNames	대상 연산에 선언된 변수 이름 집합.
-	 * @throws IllegalArgumentException	선언되지 않은 이름의 인자가 지정된 경우.
+	 * @throws CommandLine.ParameterException	선언되지 않은 이름의 인자가 지정된 경우.
 	 */
-	protected static void checkArgumentNames(String kind, Map<String,String> cmdArgs, Set<String> varNames) {
+	protected void checkArgumentNames(String kind, Map<String,String> cmdArgs, Set<String> varNames) {
 		List<String> unknowns = FStream.from(cmdArgs.keySet())
 										.filterNot(varNames::contains)
 										.sort()
 										.toList();
 		if ( !unknowns.isEmpty() ) {
-			throw new IllegalArgumentException(
+			throw usageError(
 					String.format("unknown %s argument(s): %s (declared %s variables: %s)",
 									kind, unknowns, kind, varNames));
 		}

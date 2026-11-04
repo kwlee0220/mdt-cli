@@ -38,7 +38,7 @@ sbin/mdt <명령> [하위명령] [인자...] [옵션...]
 
 모든 명령은 실행 중인 MDTManager에 HTTP로 접속한다. 접속 정보는 다음 우선순위로 결정된다.
 
-1. `--client_conf <path>` 옵션으로 지정한 설정 파일
+1. `--client-conf <path>` 옵션으로 지정한 설정 파일
 2. `$MDT_CLIENT_HOME/mdt_client_config.yaml` (`MDT_CLIENT_HOME`이 없으면 현재 디렉토리의 같은 파일)
 3. 환경 변수 `MDT_URL` (endpoint URL)
 
@@ -72,7 +72,7 @@ workflowManagerUrl: "${env:MDT_WORKFLOW_URL:-http://localhost:12989}"
 
 | 옵션 | 인자 | 설명 |
 |------|------|------|
-| `--client_conf` | `<path>` | MDTManager 클라이언트 설정 파일 경로 |
+| `--client-conf` | `<path>` | MDTManager 클라이언트 설정 파일 경로 |
 | `--loglevel` | `<level>` | 로그 레벨: `debug`, `info`, `warn`, `error` |
 | `-h`, `--help` | | 사용법 출력 |
 | `-V`, `--version` | | 버전 출력 |
@@ -81,12 +81,16 @@ workflowManagerUrl: "${env:MDT_WORKFLOW_URL:-http://localhost:12989}"
 
 ---
 
+옵션 이름은 kebab-case(`--client-conf`, `--json-file`, `--mime-type`, `--show-result`, `--base-url`,
+`--use-endpoint`)를 쓴다. 이전 이름(`--client_conf`, `--jsonFile`, `--mimeType`, `--showResult`, `--baseUrl`,
+`--use_endpoint`, `--pollInterval`)도 별칭으로 계속 받는다.
+
 ## 명령어 전체 구조
 
 ```
 mdt
 ├── endpoints                     클라이언트 endpoint 정보 출력
-├── build <id> <dir>              MDTInstance zip 파일 생성
+├── build <instance-id> <dir>     MDTInstance zip 파일 생성
 ├── list                          MDT 엔티티 목록 조회
 │   ├── instances                 MDT 인스턴스 목록
 │   ├── shells                    AAS(Shell) 목록
@@ -95,45 +99,49 @@ mdt
 │   ├── wfmodels                  워크플로우 모델 목록
 │   └── workflows                 워크플로우 인스턴스 목록
 ├── get                           MDT 엔티티 상세 조회
-│   ├── instance <id>             인스턴스 정보 ( + 하위: submodels/parameters/operations/compositions/log )
-│   ├── mdt-info <id>             MDT 모델 정보
-│   ├── element <id> <sm> <path>  SubmodelElement 값 조회 (또는 --ref <element-ref>)
-│   ├── parameter <id> [param]    파라미터 값 조회
-│   ├── argument <id> <op> <arg>  오퍼레이션 인자 값 조회
-│   ├── shell <id>                AAS(Shell) 정보
-│   ├── submodel <id> [idshort]   Submodel 정보
+│   ├── instance <instance-id>    인스턴스 정보 ( + 하위: submodels/parameters/operations/compositions/log )
+│   ├── mdt-info <instance-id>    MDT 모델 정보
+│   ├── element <instance-id> <submodel-idShort> <idShortPath>  SubmodelElement 값 조회 (또는 --ref <element-ref>)
+│   ├── parameter <instance-id> [parameter-id]  파라미터 값 조회
+│   ├── argument <instance-id> <operation-id> <argument-id>  오퍼레이션 인자 값 조회
+│   ├── shell <aas-id|instance-id>  AAS(Shell) 정보
+│   ├── submodel <instance-id|submodel-id> [submodel-idShort]  Submodel 정보
 │   ├── file <element-ref>        File SubmodelElement 다운로드
-│   ├── timeseries (ts) <id> <sm> 시계열 데이터 조회
-│   ├── wfmodel <id>              워크플로우 모델 ( + 하위: script )
-│   └── workflow <id>             워크플로우 인스턴스 ( + 하위: log )
+│   ├── timeseries (ts) <instance-id> <submodel-idShort>  시계열 데이터 조회
+│   ├── wfmodel <model-id>        워크플로우 모델 ( + 하위: script )
+│   └── workflow <workflow-name>  워크플로우 인스턴스 ( + 하위: log )
 ├── add                           MDT 엔티티 등록
-│   ├── instance <id> <path>      MDT 인스턴스 등록
+│   ├── instance <instance-id> <path>  MDT 인스턴스 등록
 │   └── wfmodel <path>            워크플로우 모델 등록
 ├── set                           MDT 엔티티 값 설정
-│   ├── element <inst> <sm> <path>  SubmodelElement 값 설정
-│   ├── parameter <id> [param]      파라미터 값 설정
-│   ├── argument <id> <op> <arg>    오퍼레이션 인자 값 설정
+│   ├── element <instance-id> <submodel-idShort> <idShortPath>  SubmodelElement 값 설정
+│   ├── parameter <instance-id> [parameter-id]  파라미터 값 설정
+│   ├── argument <instance-id> <operation-id> <argument-id>  오퍼레이션 인자 값 설정
 │   └── file <element-ref> <path>   File SubmodelElement 설정
 ├── remove                        MDT 엔티티 삭제
-│   ├── instance [ids...]         MDT 인스턴스 삭제
+│   ├── instance [instance-id...]  MDT 인스턴스 삭제
 │   ├── file <element-ref>        File 첨부 삭제
-│   ├── wfmodel [ids...]          워크플로우 모델 삭제
-│   └── workflow [ids...]         워크플로우 인스턴스 삭제
+│   ├── wfmodel [model-id...]     워크플로우 모델 삭제
+│   └── workflow [workflow-name...]  워크플로우 인스턴스 삭제
 ├── start                         MDT 엔티티 기동
-│   ├── instance [ids...]         인스턴스 기동
+│   ├── instance [instance-id...]  인스턴스 기동
 │   └── workflow <model-id>       워크플로우 기동
 ├── stop                          MDT 엔티티 중지
-│   ├── instance [ids...]         인스턴스 중지
-│   └── workflow <wf-id>          워크플로우 중지
+│   ├── instance [instance-id...]  인스턴스 중지
+│   └── workflow <workflow-name>  워크플로우 중지
+├── suspend                       MDT 엔티티 일시 정지
+│   └── workflow <workflow-name>  워크플로우 일시 정지
+├── resume                        일시 정지된 MDT 엔티티 재개
+│   └── workflow <workflow-name>  워크플로우 재개
 ├── run                           MDT Task 실행
-│   ├── operation <id> <sm> <path>  AAS Operation 실행
-│   ├── submodel <id> <sm>          AI/Simulation Submodel 실행
+│   ├── operation <instance-id> <submodel-idShort> <idShortPath>  AAS Operation 실행
+│   ├── submodel <instance-id> <submodel-idShort>  AI/Simulation Submodel 실행
 │   ├── restful                     RESTful 기반 async RPC 실행
 │   └── set                         set task 실행
 ├── resolve                       MDT 대상 해석
 │   └── reference <element-ref>   ElementReference를 URL로 해석
 └── simulation                    시뮬레이션 제어
-    └── run <id>                  시뮬레이션 실행 (SKKU)
+    └── run <instance-id|submodel-id>  시뮬레이션 실행 (SKKU)
 ```
 
 ---
@@ -150,13 +158,13 @@ MQTT endpoint)를 출력한다. 설정은 위 [접속 설정](#mdtmanager-접속
 mdt endpoints
 ```
 
-### `mdt build <id> <dir>`
+### `mdt build <instance-id> <dir>`
 
 MDTInstance 구현 디렉토리로부터 배포용 zip 파일을 생성한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | MDTInstance 식별자 |
+| `instance-id` | O | MDTInstance 식별자 |
 | `dir` | O | MDTInstance 디렉토리 경로 |
 
 ```bash
@@ -245,13 +253,13 @@ mdt list workflows -g "line-*" -l
 
 ## `mdt get` — 상세 조회
 
-### `mdt get instance <id>`
+### `mdt get instance <instance-id>`
 
 MDTInstance 정보를 조회한다. 자체적으로 하위 명령을 가진다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | 조회할 MDTInstance id |
+| `instance-id` | O | 조회할 MDTInstance id |
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
@@ -262,9 +270,9 @@ mdt get instance line-01
 mdt get instance line-01 -o json
 ```
 
-#### `mdt get instance <id>` 하위 명령
+#### `mdt get instance <instance-id>` 하위 명령
 
-아래 하위 명령들은 상위 `instance` 명령의 위치 인자 `id`를 대상으로 동작한다. (`log`을 제외한
+아래 하위 명령들은 상위 `instance` 명령의 위치 인자 `instance-id`를 대상으로 동작한다. (`log`을 제외한
 나머지는 `-o/--output`(`tree`|`json`, 기본 `tree`)과 `-v` 옵션을 공통 지원한다.)
 
 | 하위 명령 | 설명 |
@@ -283,13 +291,13 @@ mdt get instance line-01 compositions
 mdt get instance line-01 log
 ```
 
-### `mdt get mdt-info <id>`
+### `mdt get mdt-info <instance-id>`
 
 인스턴스의 MDT 모델 정보를 조회한다. 표시할 항목을 플래그로 선택한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | 조회할 MDTInstance id |
+| `instance-id` | O | 조회할 MDTInstance id |
 
 | 옵션 | 기본값 | 설명 |
 |------|--------|------|
@@ -314,11 +322,11 @@ SubmodelElement 정보를 조회한다. 대상 지정은 **위치 인자 방식*
 
 | 위치 인자 | 설명 |
 |-----------|------|
-| `instance` | MDTInstance id |
-| `submodel` | 대상 submodel idShort |
-| `path` | 대상 SubmodelElement idShortPath |
+| `instance-id` | MDTInstance id |
+| `submodel-idShort` | 대상 submodel idShort |
+| `idShortPath` | 대상 SubmodelElement idShortPath |
 
-  세 인자는 `<instance>:<submodel>:<path>` 참조식으로 합쳐 해석된다. `*` 와일드카드는 지원하지 않으며
+  세 인자는 `<instance-id>:<submodel-idShort>:<idShortPath>` 참조식으로 합쳐 해석된다. `*` 와일드카드는 지원하지 않으며
   지정하면 참조식 파싱 오류가 난다. submodel 전체를 보려면 `mdt get submodel`을 쓴다.
 
 - 참조식 방식:
@@ -342,14 +350,14 @@ mdt get element --ref param:line-01:param1 -o value
 mdt get element --ref 'param:line-01:*' -o json     # 파라미터 전체
 ```
 
-### `mdt get parameter <id> [parameter]`
+### `mdt get parameter <instance-id> [parameter-id]`
 
 MDTInstance의 파라미터 정보를 조회한다.
 
 | 위치 인자 | 기본값 | 설명 |
 |-----------|--------|------|
-| `id` (필수) | | MDTInstance id |
-| `parameter` | `*` | 대상 파라미터 id (`*` = 전체) |
+| `instance-id` (필수) | | MDTInstance id |
+| `parameter-id` | `*` | 대상 파라미터 id (`*` = 전체) |
 
 공통 출력 옵션: `-o/--output`(`tree` 기본), `-r/--repeat`, `-v`.
 
@@ -358,15 +366,15 @@ mdt get parameter line-01
 mdt get parameter line-01 temperature -o value
 ```
 
-### `mdt get argument <id> <operation> <argument>`
+### `mdt get argument <instance-id> <operation-id> <argument-id>`
 
 오퍼레이션(AI/Simulation) 인자 값을 조회한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | MDTInstance id |
-| `operation` | O | 대상 오퍼레이션(AI/Simulation) id |
-| `argument` | O | 대상 인자 id |
+| `instance-id` | O | MDTInstance id |
+| `operation-id` | O | 대상 오퍼레이션(AI/Simulation) id |
+| `argument-id` | O | 대상 인자 id |
 
 공통 출력 옵션: `-o/--output`(`tree` 기본), `-r/--repeat`, `-v`.
 
@@ -374,13 +382,13 @@ mdt get parameter line-01 temperature -o value
 mdt get argument line-01 predict input1 -o value
 ```
 
-### `mdt get shell <id>`
+### `mdt get shell <aas-id|instance-id>`
 
 AssetAdministrationShell 정보를 조회한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | AAS id 또는 MDTInstance id |
+| `aas-id\|instance-id` | O | AAS id(또는 AAS idShort) 또는 MDTInstance id |
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
@@ -390,14 +398,14 @@ AssetAdministrationShell 정보를 조회한다.
 mdt get shell line-01 -o desc
 ```
 
-### `mdt get submodel <id> [submodel-idshort]`
+### `mdt get submodel <instance-id|submodel-id> [submodel-idShort]`
 
 Submodel 정보를 조회한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
 | `instance-id\|submodel-id` | O | MDTInstance id 또는 Submodel id |
-| `submodel-idshort` | | 대상 Submodel idShort (instance-id와 함께 사용) |
+| `submodel-idShort` | | 대상 Submodel idShort (instance-id와 함께 사용) |
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
@@ -425,13 +433,13 @@ File SubmodelElement의 첨부 파일을 내려받아 로컬 파일로 저장한
 mdt get file param:line-01:manual -f ./manual.pdf
 ```
 
-### `mdt get timeseries <id> <submodel-idShort>`  (별칭: `ts`)
+### `mdt get timeseries <instance-id> <submodel-idShort>`  (별칭: `ts`)
 
 시계열(TimeSeries) submodel의 레코드를 조회한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | MDTInstance id |
+| `instance-id` | O | MDTInstance id |
 | `submodel-idShort` | O | 대상 TimeSeries submodel idShort |
 
 | 옵션 | 인자 | 기본값 | 설명 |
@@ -474,19 +482,19 @@ mdt get timeseries line-01 Log --start 2026-07-01T09:00:00Z --count 100 -o csv -
 mdt get timeseries line-01 Log --start 1970-01-01T00:00:00Z --count 1 -o csv
 ```
 
-### `mdt get wfmodel <wfmodel_id>`
+### `mdt get wfmodel <model-id>`
 
 워크플로우 모델 정보를 조회한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `wfmodel_id` | O | 조회할 워크플로우 모델 id |
+| `model-id` | O | 조회할 워크플로우 모델 id |
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
 | `-o`, `--output` | `<type>` | `table` | `table`, `json` |
 
-하위 명령 `mdt get wfmodel <id> script` — 워크플로우 스크립트를 조회한다.
+하위 명령 `mdt get wfmodel <model-id> script` — 워크플로우 스크립트를 조회한다.
 
 | 옵션 | 인자 | 설명 |
 |------|------|------|
@@ -498,19 +506,19 @@ mdt get wfmodel line-flow -o json
 mdt get wfmodel line-flow script
 ```
 
-### `mdt get workflow <id>`
+### `mdt get workflow <workflow-name>`
 
 워크플로우 인스턴스(또는 모델) 정보를 조회한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | 조회할 워크플로우 id |
+| `workflow-name` | O | 조회할 워크플로우 인스턴스 이름 |
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
 | `-o`, `--output` | `<type>` | `table` | `table`, `json` |
 
-하위 명령 `mdt get workflow <id> log` — 워크플로우 로그를 조회하는 명령이다.
+하위 명령 `mdt get workflow <workflow-name> log` — 워크플로우 로그를 조회하는 명령이다.
 
 | 옵션 | 인자 | 필수 | 설명 |
 |------|------|------|------|
@@ -526,13 +534,13 @@ mdt get workflow line-flow-001 -o json
 
 ## `mdt add` — 등록
 
-### `mdt add instance <id> <path>`
+### `mdt add instance <instance-id> <path>`
 
 MDT 인스턴스를 등록한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | 등록할 MDTInstance 식별자 |
+| `instance-id` | O | 등록할 MDTInstance 식별자 |
 | `path` | O | MDTInstance 구현 디렉토리 또는 zip 파일 경로 |
 
 | 옵션 | 인자 | 기본값 | 설명 |
@@ -570,55 +578,55 @@ mdt add wfmodel ./workflows/line-flow.json -f
 
 | 소스 옵션 | 인자 | 설명 |
 |-----------|------|------|
-| `--jsonFile` | `<path>` | JSON 파일 경로 |
+| `--json-file` | `<path>` | JSON 파일 경로 |
 | `--json` | `<json>` | SubmodelElement/ElementValue의 JSON 문자열 |
-| `--file` | `<path>` | (File 요소용) 파일 경로. 아래 `--path`/`--mimeType`와 함께 사용 |
+| `--file` | `<path>` | (File 요소용) 파일 경로. 아래 `--path`/`--mime-type`와 함께 사용 |
 | `--path` | `<value>` | File 값 경로(선택) |
-| `--mimeType` | `<contentType>` | File contentType(선택) |
+| `--mime-type` | `<contentType>` | File contentType(선택) |
 
-### `mdt set element <instance> [submodel] [path]`
+### `mdt set element <instance-id> [submodel-idShort] [idShortPath]`
 
 SubmodelElement 값을 설정한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `instance` | O | MDTInstance id |
-| `submodel` | O* | 대상 submodel idShort |
-| `path` | O* | 대상 SubmodelElement idShortPath |
+| `instance-id` | O | MDTInstance id |
+| `submodel-idShort` | O* | 대상 submodel idShort |
+| `idShortPath` | O* | 대상 SubmodelElement idShortPath |
 
 \* 파싱 단계에서는 생략할 수 있지만(기본값 `*`), `*`는 참조식으로 해석되지 않아 실행 시 오류가 나므로
 반드시 지정한다.
 
 ```bash
 mdt set element line-01 Data DataInfo.temperature --json '25.3'
-mdt set element line-01 Data DataInfo --jsonFile ./data.json
+mdt set element line-01 Data DataInfo --json-file ./data.json
 ```
 
-### `mdt set parameter <id> [parameter]`
+### `mdt set parameter <instance-id> [parameter-id]`
 
 파라미터 값을 설정한다.
 
 | 위치 인자 | 기본값 | 설명 |
 |-----------|--------|------|
-| `id` (필수) | | MDTInstance id |
-| `parameter` | `*` | 대상 파라미터 id |
+| `instance-id` (필수) | | MDTInstance id |
+| `parameter-id` | `*` | 대상 파라미터 id |
 
 ```bash
 mdt set parameter line-01 temperature --json '25.3'
 ```
 
-### `mdt set argument <id> <operation> <argument>`
+### `mdt set argument <instance-id> <operation-id> <argument-id>`
 
 오퍼레이션(AI/Simulation) 인자 값을 설정한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | MDTInstance id |
-| `operation` | O | 대상 오퍼레이션 id |
-| `argument` | O | 대상 인자 id |
+| `instance-id` | O | MDTInstance id |
+| `operation-id` | O | 대상 오퍼레이션 id |
+| `argument-id` | O | 대상 인자 id |
 
 ```bash
-mdt set argument line-01 predict input1 --jsonFile ./in1.json
+mdt set argument line-01 predict input1 --json-file ./in1.json
 ```
 
 ### `mdt set file <element-ref> <path>`
@@ -634,23 +642,23 @@ File SubmodelElement를 설정한다. (다른 `set` 명령과 달리 소스 그�
 | 옵션 | 인자 | 설명 |
 |------|------|------|
 | `--path` | `<value>` | File 값 경로 |
-| `--mimeType` | `<contentType>` | File contentType |
+| `--mime-type` | `<contentType>` | File contentType |
 
 ```bash
-mdt set file param:line-01:manual ./manual.pdf --mimeType application/pdf
+mdt set file param:line-01:manual ./manual.pdf --mime-type application/pdf
 ```
 
 ---
 
 ## `mdt remove` — 삭제
 
-### `mdt remove instance [ids...]`
+### `mdt remove instance [instance-id...]`
 
 MDT 인스턴스를 삭제한다.
 
 | 위치 인자 | 설명 |
 |-----------|------|
-| `ids...` | 삭제할 MDTInstance id 목록 (`--all` 지정 시 생략 가능) |
+| `instance-id...` | 삭제할 MDTInstance id 목록 (`--all` 지정 시 생략 가능) |
 
 | 옵션 | 설명 |
 |------|------|
@@ -679,13 +687,13 @@ AAS File 첨부를 삭제한다.
 mdt remove file param:line-01:manual
 ```
 
-### `mdt remove wfmodel [ids...]`
+### `mdt remove wfmodel [model-id...]`
 
 워크플로우 모델을 삭제한다. (id, `--glob`, `--all` 중 하나로 대상을 지정)
 
 | 위치 인자 | 설명 |
 |-----------|------|
-| `ids...` | 삭제할 워크플로우 모델 id 목록 |
+| `model-id...` | 삭제할 워크플로우 모델 id 목록 |
 
 | 옵션 | 인자 | 설명 |
 |------|------|------|
@@ -697,13 +705,13 @@ mdt remove wfmodel line-flow
 mdt remove wfmodel -g "test-*"
 ```
 
-### `mdt remove workflow [ids...]`
+### `mdt remove workflow [workflow-name...]`
 
 워크플로우 인스턴스를 삭제한다. (id, `--glob`, `--all`, `--model-filter` 중 하나로 대상 지정)
 
 | 위치 인자 | 설명 |
 |-----------|------|
-| `ids...` | 삭제할 워크플로우 인스턴스 id 목록 |
+| `workflow-name...` | 삭제할 워크플로우 인스턴스 이름 목록 |
 
 | 옵션 | 인자 | 설명 |
 |------|------|------|
@@ -720,13 +728,13 @@ mdt remove workflow --model-filter line-flow
 
 ## `mdt start` — 기동
 
-### `mdt start instance [ids...]`
+### `mdt start instance [instance-id...]`
 
 MDTInstance를 기동한다.
 
 | 위치 인자 | 설명 |
 |-----------|------|
-| `ids...` | 기동할 MDTInstance id 목록 (`--all` 지정 시 생략 가능) |
+| `instance-id...` | 기동할 MDTInstance id 목록 (`--all` 지정 시 생략 가능) |
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
@@ -759,13 +767,13 @@ mdt start workflow line-flow
 
 ## `mdt stop` — 중지
 
-### `mdt stop instance [ids...]`
+### `mdt stop instance [instance-id...]`
 
 실행 중인 MDTInstance를 중지한다.
 
 | 위치 인자 | 설명 |
 |-----------|------|
-| `ids...` | 중지할 MDTInstance id 목록 (`--all` 지정 시 생략 가능) |
+| `instance-id...` | 중지할 MDTInstance id 목록 (`--all` 지정 시 생략 가능) |
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
@@ -781,16 +789,41 @@ mdt stop instance line-01
 mdt stop instance --all
 ```
 
-### `mdt stop workflow <wf-id>`
+### `mdt stop workflow <workflow-name>`
 
 워크플로우를 중지한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `wf-id` | O | 중지할 워크플로우 인스턴스 id |
+| `workflow-name` | O | 중지할 워크플로우 인스턴스 이름 |
 
 ```bash
 mdt stop workflow line-flow-001
+```
+
+---
+
+## `mdt suspend` / `mdt resume` — 일시 정지와 재개
+
+### `mdt suspend workflow <workflow-name>`
+
+실행 중인 워크플로우를 일시 정지하고, 갱신된 워크플로우 정보를 출력한다.
+
+| 위치 인자 | 필수 | 설명 |
+|-----------|------|------|
+| `workflow-name` | O | 일시 정지할 워크플로우 인스턴스 이름 |
+
+### `mdt resume workflow <workflow-name>`
+
+일시 정지된 워크플로우를 재개하고, 갱신된 워크플로우 정보를 출력한다.
+
+| 위치 인자 | 필수 | 설명 |
+|-----------|------|------|
+| `workflow-name` | O | 재개할 워크플로우 인스턴스 이름 |
+
+```bash
+mdt suspend workflow line-flow-001
+mdt resume workflow line-flow-001
 ```
 
 ---
@@ -820,7 +853,7 @@ mdt stop workflow line-flow-001
 |------|------|--------|------|
 | `--poll` | `<duration>` | `1s` | 상태 폴링 주기 |
 | `--timeout` | `<duration>` | (없음) | 실행 타임아웃 |
-| `--showResult`, `--showResults` | | false | 실행 후 output/inoutput 인자 값을 콘솔에 표시 |
+| `--show-result` | | false | 실행 후 output/inoutput 인자 값을 콘솔에 표시 |
 
 입력 인자(`--in.<name>`)의 값은 명령마다 다음 순서로 해석한다.
 
@@ -830,30 +863,30 @@ mdt stop workflow line-flow-001
 | `restful` | ① 참조식이면 참조 대상의 값(File이면 참조 자체) → ② JSON 리터럴 → ③ 그 외는 문자열 |
 | `set` | ① 참조식이면 참조 → ② 값 리터럴([CLAUDE.md](CLAUDE.md) §3 문법) → ③ 그 외는 문자열 |
 
-### `mdt run operation <id> <submodel-idShort> [path]`
+### `mdt run operation <instance-id> <submodel-idShort> [idShortPath]`
 
 AAS Operation 요소를 실행한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | MDTInstance id |
+| `instance-id` | O | MDTInstance id |
 | `submodel-idShort` | O | 대상 submodel idShort |
-| `path` | O* | 대상 Operation 요소의 idShortPath |
+| `idShortPath` | O* | 대상 Operation 요소의 idShortPath |
 
 \* 파싱 단계에서는 생략할 수 있지만(기본값 `*`), `*`는 참조식으로 해석되지 않아 실행 시 오류가 나므로
 반드시 지정한다.
 
 ```bash
-mdt run operation line-01 Ops predict --in.x 3 --out.y param:line-01:result --showResult
+mdt run operation line-01 Ops predict --in.x 3 --out.y param:line-01:result --show-result
 ```
 
-### `mdt run submodel <id> <submodel-idShort>`
+### `mdt run submodel <instance-id> <submodel-idShort>`
 
 AI/Simulation Submodel을 실행한다. (`--inout.*` 를 지정하면 오류)
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | MDTInstance id |
+| `instance-id` | O | MDTInstance id |
 | `submodel-idShort` | O | 대상 AI/Simulation submodel idShort |
 
 ```bash
@@ -867,18 +900,18 @@ mdt run submodel line-01 Predict --in.input1 param:line-01:temp --out.out1 param
 
 | 옵션 | 인자 | 필수 | 설명 |
 |------|------|------|------|
-| `--baseUrl` | `<baseURL>` | O | 서버 base URL |
+| `--base-url` | `<baseURL>` | O | 서버 base URL |
 | `--endpoint` | `<endpoint>` | O | 오퍼레이션 endpoint |
 
-`--poll`/`--timeout`/`--showResult`는 위 공통 옵션과 같다.
+`--poll`/`--timeout`/`--show-result`는 위 공통 옵션과 같다.
 
 - `--out.<name>`이 가리키는 요소의 값은 요청 시점에 읽어 요청 메시지에 함께 보낸다(File이면 참조 자체).
   응답 값에 `@type`이 없으면 이 값의 타입으로 해석하여 기록한다.
 - 요청한 출력이 응답에 없거나, 요청하지 않은 출력이 응답에 있으면 무시하고 경고 로그만 남긴다.
 
 ```bash
-mdt run restful --baseUrl http://localhost:9000 --endpoint /op/predict \
-    --in.x 3 --out.y param:line-01:result --showResult
+mdt run restful --base-url http://localhost:9000 --endpoint /op/predict \
+    --in.x 3 --out.y param:line-01:result --show-result
 ```
 
 ### `mdt run set`
@@ -917,17 +950,17 @@ mdt resolve reference param:line-01:temperature
 
 ## `mdt simulation` — 시뮬레이션 제어
 
-### `mdt simulation run <id>`
+### `mdt simulation run <instance-id|submodel-id>`
 
 시뮬레이션(SKKU)을 실행한다.
 
 | 위치 인자 | 필수 | 설명 |
 |-----------|------|------|
-| `id` | O | 대상 Simulation Submodel(또는 MDTInstance) id |
+| `instance-id\|submodel-id` | O | MDTInstance id 또는 대상 Simulation Submodel id |
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
-| `-e`, `--use_endpoint` | | false | Simulation submodel 서비스 endpoint로 호출 |
+| `-e`, `--use-endpoint` | | false | Simulation submodel 서비스 endpoint로 호출 |
 | `--nowait` | | false | 실행 완료까지 대기하지 않음 |
 | `--poll` | `<duration>` | `3s` | 상태 폴링 주기 |
 | `-t`, `--timeout` | `<duration>` | | 시뮬레이션 타임아웃 |
@@ -945,6 +978,5 @@ mdt simulation run sim-line-01 -e --poll 5s
 소스에는 존재하지만 `MDTCommandsMain`의 `subcommands`에 등록되어 있지 않아 현재 `mdt` 명령으로
 호출할 수 없는 항목이 있다. 참고용으로만 기록한다.
 
-- `mdt/cli/workflow/`의 `SuspendWorkflowCommand`, `ResumeWorkflowCommand`와 `mdt/cli/`의
-  `StopSimulationCommand`, `mdt/task/skku/`의 `SKKUSimulationTaskCommand` 역시 어떤 그룹에도
+- `mdt/cli/`의 `StopSimulationCommand`, `mdt/task/skku/`의 `SKKUSimulationTaskCommand`는 어떤 그룹에도
   등록되어 있지 않다.

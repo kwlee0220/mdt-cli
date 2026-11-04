@@ -13,7 +13,6 @@ import mdt.cli.AbstractMDTCommand;
 import mdt.client.instance.HttpMDTInstanceClient;
 import mdt.client.instance.HttpMDTInstanceManager;
 import mdt.client.instance.StartInstances;
-import mdt.client.instance.StartMDTInstances;
 import mdt.model.MDTManager;
 import mdt.model.ResourceNotFoundException;
 import mdt.model.instance.MDTInstance;
@@ -21,10 +20,8 @@ import mdt.model.instance.MDTInstanceStatus;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 
 /**
@@ -56,12 +53,10 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 	 * 얻어 {@link CommandLine.ParameterException}을 발생시키는 데 사용한다.
 	 * 직접 인스턴스화 등 picocli 파싱을 거치지 않은 경우 {@code null}일 수 있다.
 	 */
-	@Spec private CommandSpec m_spec;
-
 	/**
 	 * 시작할 MDTInstance ID 목록. {@code --all}이 지정되지 않은 경우 하나 이상을 지정해야 한다.
 	 */
-	@Parameters(index="0..*", paramLabel="id",
+	@Parameters(index="0..*", paramLabel="instance-id",
 				description="MDTInstance ids to start. Required unless --all is specified.")
 	private List<String> m_instanceIdList = new ArrayList<>();
 
@@ -95,7 +90,7 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 	/**
 	 * 인스턴스를 동시에 시작하기 위한 스레드 풀 크기. 기본값 1.
 	 */
-	@Option(names={"--nthreads", "-n"}, defaultValue = "1",
+	@Option(names={"--nthreads", "-n"}, paramLabel="count", defaultValue = "1",
 			description="Thread pool size (default: ${DEFAULT-VALUE})")
 	private int m_nthreads = 1;
 
@@ -131,9 +126,8 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 	 * {@link #validateStartTargets()}의 문서를 참조한다.
 	 */
 	@Override
-	public void run() {
+	protected void validate() {
 		validateStartTargets();
-		super.run();
 	}
 
 	/**
@@ -145,17 +139,6 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 	 */
 	@Override
 	public void run(MDTManager mdt) throws Exception {
-//		StartMDTInstances.builder()
-//						.mdtInstanceManager(mdt.getInstanceManager())
-//						.instanceIdList(m_instanceIdList)
-//						.pollingInterval(m_pollingInterval)
-//						.timeout(m_timeout)
-//						.nowait(m_nowait)
-//						.startAll(m_startAll)
-//						.nthreads(m_nthreads)
-//						.recursive(m_recursive)
-//						.build()
-//						.run();
 		HttpMDTInstanceManager manager = (HttpMDTInstanceManager)mdt.getInstanceManager();
 		List<HttpMDTInstanceClient> instList = new ArrayList<>();
 		if ( m_startAll ) {
@@ -171,7 +154,7 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 					instList.add(inst);
 				}
 				catch ( ResourceNotFoundException e ) {
-					System.out.println("No such MDTInstance: " + id);
+					err().println("No such MDTInstance: " + id);
 					markFailed();
 				}
 			}
@@ -184,6 +167,7 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 						.concurrency(m_nthreads)
 						.recursive(m_recursive)
 						.statusListener(this::printInstanceStatus)
+						.failureListener(this::printStartFailure)
 						.run();
 	}
 
@@ -201,33 +185,20 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 	private void validateStartTargets() {
 		boolean hasInstanceIds = !m_instanceIdList.isEmpty();
 		if ( m_startAll && hasInstanceIds ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"Specify either MDTInstance ids or --all, not both.");
+			throw usageError("Specify either MDTInstance ids or --all, not both.");
 		}
 		if ( m_recursive && !hasInstanceIds ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"--recursive requires one or more MDTInstance ids; it cannot be combined with --all.");
+			throw usageError("--recursive requires one or more MDTInstance ids; it cannot be combined with --all.");
 		}
 		if ( !m_startAll && !hasInstanceIds ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"Specify at least one MDTInstance id or use --all.");
+			throw usageError("Specify at least one MDTInstance id or use --all.");
 		}
 	}
 
-	/**
-	 * 검증 메시지 발생용 {@link CommandLine}을 반환한다. picocli가 정상적으로 파싱한 경우
-	 * 주입된 {@link #m_spec}에서 가져오고, 그렇지 않으면 새로 생성한 인스턴스를 사용한다.
-	 *
-	 * @return 이 명령에 연결된 {@link CommandLine}.
-	 */
-	private CommandLine getCommandLine() {
-		return (m_spec != null) ? m_spec.commandLine() : new CommandLine(this);
-	}
 	
 	/**
-	 * {@link #main(String...)} 예제에서 사용되는 상태 변경 리스너. 인스턴스의 현재 상태를
-	 * 사람이 읽기 쉬운 메시지로 표준 출력에 출력한다. 시작에 실패한 인스턴스가 있으면 명령의 실패로 기록한다
-	 * ({@link #markFailed()}).
+	 * 상태 변경 리스너. 인스턴스의 현재 상태를 사람이 읽기 쉬운 메시지로 출력한다(실패는 오류 writer).
+	 * 시작에 실패한 인스턴스가 있으면 명령의 실패로 기록한다({@link #markFailed()}).
 	 *
 	 * @param inst		상태가 변경된 인스턴스.
 	 * @param status	새 상태.
@@ -235,20 +206,31 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 	private void printInstanceStatus(MDTInstance inst, MDTInstanceStatus status) {
 		switch ( status ) {
 			case STARTING:
-				System.out.println("MDTInstance starting: " + inst.getId());
+				out().println("MDTInstance starting: " + inst.getId());
 				break;
 			case RUNNING:
-				System.out.println("MDTInstance started: " + inst.getId());
+				out().println("MDTInstance started: " + inst.getId());
 				break;
 			case FAILED:
-				System.out.println("MDTInstance failed to start: " + inst.getId());
+				err().println("MDTInstance failed to start: " + inst.getId());
 				markFailed();
 				break;
 			default:
-				System.out.println("MDTInstance failed to start: " + inst.getId()
+				err().println("MDTInstance failed to start: " + inst.getId()
 									+ ", unexpected state: " + status);
 				markFailed();
 				break;
 		}
+	}
+	
+	/**
+	 * 실패 리스너. 시작 중 예외가 난 인스턴스와 원인을 오류 writer에 출력하고 명령의 실패로 기록한다.
+	 *
+	 * @param inst	시작에 실패한 인스턴스.
+	 * @param cause	실패 원인.
+	 */
+	private void printStartFailure(MDTInstance inst, Exception cause) {
+		err().println("MDTInstance failed to start: " + inst.getId() + ", cause: " + cause);
+		markFailed();
 	}
 }

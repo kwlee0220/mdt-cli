@@ -41,7 +41,7 @@ import mdt.tree.node.info.MDTInfoNode;
 import mdt.tree.node.op.InputArgumentNode;
 import mdt.tree.node.op.OutputArgumentNode;
 import mdt.tree.node.timeseries.TimeseriesSubmodelNodeFactories.MetadataNodeFactory;
-import mdt.tree.node.timeseries.TimeseriesSubmodelNodeFactories.RecordTransform;
+import mdt.tree.node.timeseries.TimeseriesSubmodelNodeFactories.RecordNodeFactory;
 
 
 /**
@@ -53,7 +53,7 @@ public class DefaultNodeFactories {
 		throw new AssertionError("Should not be called: class=" + getClass().getName());
 	}
 	
-	public static DefaultNodeFactory SMC_FACT = new DefaultNodeFactory() {
+	private static final DefaultNodeFactory SMC_FACT = new DefaultNodeFactory() {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			return new SMCNode((SubmodelElementCollection)element);
@@ -70,7 +70,7 @@ public class DefaultNodeFactories {
 		FACTORY_REGISTRY.put(CompositionDependency.SEMANTIC_ID, CompositionDependencyNode.FACTORY);
 		FACTORY_REGISTRY.put(Input.SEMANTIC_ID, InputArgumentNode.FACTORY);
 		FACTORY_REGISTRY.put(Output.SEMANTIC_ID, OutputArgumentNode.FACTORY);
-		FACTORY_REGISTRY.put(Record.SEMANTIC_ID, new RecordTransform());
+		FACTORY_REGISTRY.put(Record.SEMANTIC_ID, new RecordNodeFactory());
 		FACTORY_REGISTRY.put(Metadata.SEMANTIC_ID, new MetadataNodeFactory());
 	}
 	
@@ -114,21 +114,18 @@ public class DefaultNodeFactories {
 		}
 	}
 	
-	private static DefaultNodeFactory PROPERTY_FACT = new DefaultNodeFactory() {
+	private static final DefaultNodeFactory PROPERTY_FACT = new DefaultNodeFactory() {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			Property prop = (Property)element;
 			
 			String title = prop.getIdShort();
-//			String title = Funcs.getFirst(prop.getDisplayName())
-//								 .map(nt -> String.format("%s(%s)", prop.getIdShort(), nt.getText()))
-//								 .getOrElse(prop.getIdShort());
 			String typeStr = Nullables.map(prop.getValueType(), vt -> String.format(" (%s)", vt));
 			return new TerminalNode(title, typeStr, prop.getValue());
 		} 
 	};
 	
-	private static DefaultNodeFactory FILE_FACT = new DefaultNodeFactory() {
+	private static final DefaultNodeFactory FILE_FACT = new DefaultNodeFactory() {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			File aasFile = (File)element;
@@ -138,21 +135,21 @@ public class DefaultNodeFactories {
 		} 
 	};
 	
-	private static DefaultNodeFactory SML_FACT = new DefaultNodeFactory() {
+	private static final DefaultNodeFactory SML_FACT = new DefaultNodeFactory() {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			return new SMLNode((SubmodelElementList)element);
 		} 
 	};
 	
-	private static DefaultNodeFactory OP_FACT = new DefaultNodeFactory() {
+	private static final DefaultNodeFactory OP_FACT = new DefaultNodeFactory() {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			return new AASOperationNode((Operation)element);
 		} 
 	};
 	
-	private static DefaultNodeFactory RANGE_FACT = new DefaultNodeFactory() {
+	private static final DefaultNodeFactory RANGE_FACT = new DefaultNodeFactory() {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			Range range = (Range)element;
@@ -200,7 +197,7 @@ public class DefaultNodeFactories {
 		}
 	}
 	
-	private static DefaultNodeFactory MLP_FACT = new DefaultNodeFactory() {
+	private static final DefaultNodeFactory MLP_FACT = new DefaultNodeFactory() {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			MultiLanguageProperty mlp = (MultiLanguageProperty)element;
@@ -214,7 +211,7 @@ public class DefaultNodeFactories {
 		} 
 	};
 	
-	private static DefaultNodeFactory JSON_FACT = new DefaultNodeFactory() {
+	private static final DefaultNodeFactory JSON_FACT = new DefaultNodeFactory() {
 		@Override
 		public DefaultNode create(SubmodelElement element) {
 			ElementValue value = ElementValues.getValue(element);

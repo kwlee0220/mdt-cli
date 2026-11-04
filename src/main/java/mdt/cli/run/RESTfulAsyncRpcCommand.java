@@ -71,8 +71,15 @@ import mdt.task.TaskArgument.ReferenceArgument;
 public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(RESTfulAsyncRpcCommand.class);
 
-	@Option(names={"--baseUrl"}, paramLabel="baseURL", required=true, description="base URL for the server")
+	// 필수 여부는 run()에서 확인한다(숨은 별칭 --baseUrl만 주어도 되도록).
+	@Option(names={"--base-url"}, paramLabel="baseURL", description="base URL for the server")
 	private String m_baseUrl;
+	
+	/** 이전 옵션 이름 {@code --baseUrl}(도움말에는 표시하지 않는다). */
+	@Option(names={"--baseUrl"}, hidden=true)
+	private void setBaseUrlAlias(String baseUrl) {
+		m_baseUrl = baseUrl;
+	}
 
 	@Option(names={"--endpoint"}, paramLabel="endpoint", required=true, description="The operation endpoint")
 	private String m_endpoint = null;
@@ -85,15 +92,18 @@ public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 
 	@Override
 	protected void run(MDTManager mdt) throws Exception {
+		if ( m_baseUrl == null ) {
+			throw usageError("Missing required option: '--base-url'");
+		}
 		MDTInstanceManager manager = mdt.getInstanceManager();
 		Instant started = Instant.now();
 
-		// Command line 인자를로부터 전달된 input/output/inoutput 변수 값을 수집한다.
+		// Command line 인자로부터 전달된 input/output/inoutput 변수 값을 수집한다.
 		TaskCommandArguments cmdArgs = loadTaskArgumentsFromCommandLine();
 
 		// inoutput 변수는 RESTfulAsyncRpcClient에서 처리할 수 없으므로, input/output 변수만을 대상으로 한다.
 		if ( !cmdArgs.getInoutputs().isEmpty() ) {
-			throw new IllegalArgumentException("inoutput operation variables are not supported: "
+			throw usageError("inoutput operation variables are not supported: "
 												+ cmdArgs.getInoutputs().keySet());
 		}
 
@@ -158,12 +168,14 @@ public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 							try {
 								ElementValue updated = update(outArg, match._2);
 
-								if ( m_runOptions.getShowResult() ) {
-									System.out.printf("%s: %s%n", argId, updated.toDisplayString());
+								if ( m_runOptions.isShowResult() ) {
+									out().printf("%s: %s%n", argId, updated.toDisplayString());
 								}
 							}
 							catch ( IOException e ) {
-								getLogger().warn("Failed to update output argument: id={}, cause={}", argId, e);
+								// 출력 인자를 갱신하지 못하면 명령 전체를 실패로 끝낸다.
+								err().printf("Failed to update output argument: id=%s, cause=%s%n", argId, e);
+								markFailed();
 							}
 						});
 
@@ -230,6 +242,5 @@ public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 
 	public static void main(String... args) throws Exception {
 		main(new RESTfulAsyncRpcCommand(), args);
-		System.exit(0);
 	}
 }

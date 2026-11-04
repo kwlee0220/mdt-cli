@@ -38,37 +38,36 @@ class ConsoleQuitKeyDetector extends AbstractExecutionThreadService {
 	/**
 	 * 주어진 종료 문자 목록을 사용하는 {@code ConsoleQuitKeyDetector}를 생성한다.
 	 *
-	 * @param stopChars	감지 대상이 되는 종료 문자 목록. 사용자가 이 목록에 포함된
+	 * @param quitChars	감지 대상이 되는 종료 문자 목록. 사용자가 이 목록에 포함된
 	 * 					문자를 입력하면 detector의 실행이 종료된다.
 	 */
-	public ConsoleQuitKeyDetector(List<Character> stopChars) {
-		Preconditions.checkNotNullArgument(stopChars, "stopChars is null");
-		m_quitCharacters = stopChars;
+	public ConsoleQuitKeyDetector(List<Character> quitChars) {
+		Preconditions.checkNotNullArgument(quitChars, "quitChars is null");
+		m_quitCharacters = quitChars;
 	}
 
 	/**
 	 * 감지 대상이 되는 종료 문자 목록을 변경한다.
 	 *
-	 * @param stopChars	새로운 종료 문자 목록.
+	 * @param quitChars	새로운 종료 문자 목록.
 	 */
-	public void setQuitCharacters(List<Character> stopChars) {
-		Preconditions.checkNotNullArgument(stopChars, "stopChars is null");
-		m_quitCharacters = stopChars;
+	public void setQuitCharacters(List<Character> quitChars) {
+		Preconditions.checkNotNullArgument(quitChars, "quitChars is null");
+		m_quitCharacters = quitChars;
 	}
 
 	/**
-	 * 실행이 종료된 시점에 호출될 콜백을 등록한다.
+	 * 실행이 종료된 시점에 호출될 리스너를 추가한다.
 	 * <p>
 	 * 등록된 콜백은 사용자가 종료 문자를 입력하여 정상적으로 종료된 경우와
 	 * 외부에서 {@link #stopAsync()}로 중단된 경우, 그리고 실행 중 예외로 실패한
 	 * 경우 모두 호출된다. 콜백 실행 중 발생한 예외는 모두 무시된다.
 	 * <p>
-	 * 본 메소드는 매 호출마다 {@link Service.Listener}를 추가하므로 동일 콜백을
-	 * 중복 등록하지 않도록 주의한다.
+	 * 호출할 때마다 {@link Service.Listener}를 하나씩 추가하므로 같은 리스너를 두 번 추가하지 않도록 한다.
 	 *
 	 * @param callback	종료 시 호출될 콜백.
 	 */
-	public void setCancelCallback(Runnable callback) {
+	public void addQuitListener(Runnable callback) {
 		Executor executor = MoreExecutors.directExecutor();
 		addListener(new Listener() {
 			@Override

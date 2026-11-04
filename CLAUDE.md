@@ -67,7 +67,7 @@ CLI 코드가 사용하는 도메인 모델·HTTP 통신 로직 대부분은 `:m
 3. 접속된 매니저를 인자로 `run(MDTManager)` 호출
 4. 예외는 `RuntimeException`으로 감싸 전달, 종료 코드는 상위에서 결정
 
-접속 설정 해석 우선순위: `--client_conf <path>` 옵션 → `$MDT_CLIENT_HOME/mdt_client_config.yaml`
+접속 설정 해석 우선순위: `--client-conf <path>` 옵션 → `$MDT_CLIENT_HOME/mdt_client_config.yaml`
 (`MDT_CLIENT_HOME`이 없으면 현재 디렉토리) → 환경 변수 `MDT_URL`. 설정 파일이 있는데 파싱에 실패하면
 `MDT_URL`로 넘어가지 않고 오류가 난다. 설정 키는 `MDTClientConfig`(`:mdt-client`)의 필드
 (`mdtUrl`, `connectTimeout`, `readTimeout`, `mqttEndpoint`, `workflowManagerUrl`)와 정확히 일치해야 한다.
@@ -96,7 +96,7 @@ picocli `CommandLine` 구성(`main()` 및 루트)은 enum 대소문자 무시, �
   받은 `--in.<name>`/`--out.<name>`/`--inout.<name>`(종류 생략 시 input) 동적 인자를 task 인자로 해석한다.
   `--in.x 3`처럼 값을 분리한 형식은 값 토큰이 위치 인자로 소비되면 오류를 낸다.
 - [`AbstractRunTaskCommand`](src/main/java/mdt/cli/run/AbstractRunTaskCommand.java) — `operation`/`submodel`의
-  공통 기반. `--poll`/`--timeout`/`--showResult`([`OperationRunOptions`](src/main/java/mdt/cli/run/OperationRunOptions.java))를
+  공통 기반. `--poll`/`--timeout`/`--show-result`([`OperationRunOptions`](src/main/java/mdt/cli/run/OperationRunOptions.java))를
   제공하고, 서브클래스가 `newTask()`로 만든 task를 실행한다.
 - `restful`([`RESTfulAsyncRpcCommand`](src/main/java/mdt/cli/run/RESTfulAsyncRpcCommand.java))과
   `set`([`SetTaskCommand`](src/main/java/mdt/cli/run/SetTaskCommand.java))은 `DynamicArgumentsCommand`를 직접 상속한다.
@@ -107,3 +107,5 @@ picocli `CommandLine` 구성(`main()` 및 루트)은 enum 대소문자 무시, �
 
 `shadowJar`/`jar`는 의존 프로젝트의 `logback-test.xml`, `logback-spring.xml`을 제외하고 이 프로젝트의
 `logback.xml`만 포함한다(`build.gradle` 참조). 런타임 로그 설정 변경 시 이 점을 유의한다.
+로그 설정은 `$MDT_CLIENT_HOME`(없으면 현재 디렉토리)의 `logback.xml`을 먼저 쓰고, 없으면 기본값
+`src/main/resources/logback.xml`(INFO 이상을 표준 에러로 출력)을 쓴다(`MDTCommandsMain.configureLogging()`).

@@ -5,26 +5,24 @@ import java.io.PrintWriter;
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CancellationException;
 
 import org.nocrala.tools.texttablefmt.Table;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import utils.UnitUtils;
 import utils.http.RESTfulIOException;
 import utils.stream.FStream;
 
 import mdt.cli.AbstractMDTCommand;
-import mdt.cli.PeriodicRefreshingConsole;
+import mdt.cli.CsvFormat;
+import mdt.cli.RepeatOptions;
 import mdt.model.MDTManager;
-import mdt.model.ResourceNotFoundException;
 import mdt.workflow.Workflow;
 import mdt.workflow.WorkflowManager;
 
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
 /**
@@ -38,11 +36,10 @@ import picocli.CommandLine.Option;
 	mixinStandardHelpOptions = true,
 	description = "List all MDT Workflow instances."
 )
-public class ListWorkflowAllCommand extends AbstractMDTCommand {
-	private static final Logger s_logger = LoggerFactory.getLogger(ListWorkflowAllCommand.class);
+public class ListWorkflowsCommand extends AbstractMDTCommand {
+	private static final Logger s_logger = LoggerFactory.getLogger(ListWorkflowsCommand.class);
 	
-	@Option(names={"--table", "-t"}, description="display instances in a table format.")
-	private boolean m_tableFormat = false;
+	@Mixin private ListOutputOptions m_outputOpts;
 	
 	@Option(names={"--glob", "-g"}, paramLabel="expr", required=false,
 			description="glob pattern to filter workflows.")
@@ -55,18 +52,16 @@ public class ListWorkflowAllCommand extends AbstractMDTCommand {
 					description="delimiter (for 'csv' output only)")
 	private String m_delimiter = ListCommands.DELIM;
 
-	@Option(names={"--repeat", "-r"}, paramLabel="interval",
-			description="repeat interval (e.g. \"1s\", \"500ms\"")
-	private String m_repeat = null;
+	@Mixin private RepeatOptions m_repeatOpts;
 	
 	@Option(names={"-v"}, description="verbose")
 	private boolean m_verbose = false;
 
 	public static final void main(String... args) throws Exception {
-		main(new ListWorkflowAllCommand(), args);
+		main(new ListWorkflowsCommand(), args);
 	}
 	
-	public ListWorkflowAllCommand() {
+	public ListWorkflowsCommand() {
 		setLogger(s_logger);
 	}
 
@@ -74,38 +69,14 @@ public class ListWorkflowAllCommand extends AbstractMDTCommand {
 	public void run(MDTManager mdt) throws Exception {
 		WorkflowManager wfManager = mdt.getWorkflowManager();
 
-		if ( m_repeat == null ) {
-			try ( PrintWriter pw = newStdoutWriter() ) {
-				printOutput(wfManager, pw);
-			}
-			return;
-		}
-		else {
-			Duration repeatInterval = UnitUtils.parseDuration(m_repeat);
-			PeriodicRefreshingConsole pwriter = new PeriodicRefreshingConsole(repeatInterval) {
-				@Override
-				protected void print(PrintWriter pw) {
-					try {
-						printOutput(wfManager, pw);
-					}
-					catch ( Exception ignored ) {
-						pw.println("failed to list Workflow instances: cause=" + ignored);
-					}
-				}
-			};
-			pwriter.setVerbose(m_verbose);
-			try {
-				pwriter.run();
-			}
-			catch ( CancellationException | InterruptedException e ) { }
-		}
+		m_repeatOpts.run(pw -> printOutput(wfManager, pw), "list Workflow instances", m_verbose);
 	}
 	
 	private void printOutput(WorkflowManager wfManager, PrintWriter pw) throws InterruptedException {
         try {
 			List<Workflow> wfList = listWorkflows(wfManager);
 			if ( m_long ) {
-				if ( m_tableFormat ) {
+				if ( m_outputOpts.isTable() ) {
 					printInstancesLongTable(wfList, pw);
 				}
 				else {
@@ -113,7 +84,7 @@ public class ListWorkflowAllCommand extends AbstractMDTCommand {
 				}
 			}
 			else {
-				if ( m_tableFormat ) {
+				if ( m_outputOpts.isTable() ) {
 					printInstancesShortTable(wfList, pw);
 				}
 				else {
@@ -121,17 +92,14 @@ public class ListWorkflowAllCommand extends AbstractMDTCommand {
 				}
 			}
 		}
-		catch ( ResourceNotFoundException e ) {
-			pw.println("fails to list MDTWorkflows: " + e.getCause());
-		}
 		catch ( RESTfulIOException e ) {
-			Throwable cause = e.getCause();
-			if ( cause instanceof InterruptedIOException ) {
+			// 반복 출력 중 종료 키로 대기가 인터럽트된 경우는 반복을 멈추도록 InterruptedException으로 바꾼다.
+			// 그 밖의 오류는 호출자(RepeatOptions)가 처리한다(단발 출력은 오류 종료, 반복 출력은 화면에 표시).
+			if ( e.getCause() instanceof InterruptedIOException ) {
+				Thread.currentThread().interrupt();
 				throw new InterruptedException("interrupted while listing MDTWorkflows");
 			}
-			else {
-				pw.println("fails to list MDTWorkflows: " + e.getCause());
-			}
+			throw e;
 		}
 	}
 	
@@ -152,12 +120,8 @@ public class ListWorkflowAllCommand extends AbstractMDTCommand {
 	private void printInstancesShortList(List<Workflow> wfList, PrintWriter pw) {
 		int seqNo = 1;
 		for ( Workflow workflow : wfList ) {
-			pw.append(""+seqNo).append(m_delimiter);
-			pw.append(workflow.getName()).append(m_delimiter);
-			pw.append(workflow.getModelId()).append(m_delimiter);
-			pw.append(""+workflow.getTasks().size()).append(m_delimiter);
-			pw.append(String.format("%s", workflow.getStatus()));
-			pw.println();
+			pw.println(CsvFormat.toLine(m_delimiter, seqNo, workflow.getName(), workflow.getModelId(),
+										workflow.getTasks().size(), workflow.getStatus()));
 			++seqNo;
 		}
 	}
@@ -187,15 +151,11 @@ public class ListWorkflowAllCommand extends AbstractMDTCommand {
 	private void printInstancesLongList(List<Workflow> wfList, PrintWriter pw) {
 		int seqNo = 1;
 		for ( Workflow workflow : wfList ) {
-			pw.append(""+seqNo).append(m_delimiter);
-			pw.append(workflow.getName()).append(m_delimiter);
-			pw.append(workflow.getModelId()).append(m_delimiter);
-			pw.append(String.format("%s", workflow.getStatus())).append(m_delimiter);
-			pw.append(String.format("%d", workflow.getTasks().size())).append(m_delimiter);
 			String tasksStr = FStream.from(workflow.getTasks())
 										.map(task -> task.getTaskId())
 										.join(", ");
-			pw.append(tasksStr);
+			pw.append(CsvFormat.toLine(m_delimiter, seqNo, workflow.getName(), workflow.getModelId(),
+										workflow.getStatus(), workflow.getTasks().size(), tasksStr));
 			pw.println();
 			
 			++seqNo;

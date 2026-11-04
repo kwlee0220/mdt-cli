@@ -7,7 +7,6 @@ import utils.LoggerNameBuilder;
 import mdt.cli.AbstractMDTCommand;
 import mdt.client.instance.HttpMDTInstanceManager;
 import mdt.model.MDTManager;
-import mdt.model.sm.ref.ElementReference;
 import mdt.model.sm.ref.ElementReferences;
 import mdt.model.sm.ref.MDTElementReference;
 
@@ -51,11 +50,8 @@ public class RemoveFileCommand extends AbstractMDTCommand {
 	public void run(MDTManager mdt) throws Exception {
 		HttpMDTInstanceManager manager = (HttpMDTInstanceManager)mdt.getInstanceManager();
 		
-		ElementReference smeRef = ElementReferences.parseExpr(m_elmRef);
-		if ( smeRef instanceof MDTElementReference iref ) {
-			iref.activate(manager);
-		}
-		
+		MDTElementReference smeRef = ElementReferences.parseExpr(m_elmRef);
+		smeRef.activate(manager);
 		smeRef.removeAttachment();
 	}
 }

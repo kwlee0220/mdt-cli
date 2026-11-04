@@ -1,9 +1,7 @@
 package mdt.cli.get;
 
 import java.io.PrintWriter;
-import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CancellationException;
 
 import org.barfuin.texttree.api.Node;
 import org.barfuin.texttree.api.TextTree;
@@ -17,13 +15,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 
-import utils.UnitUtils;
 import utils.stream.FStream;
 import utils.func.Nullables;
 
 import mdt.cli.AbstractMDTCommand;
-import mdt.cli.PeriodicRefreshingConsole;
-import mdt.model.InvalidResourceStatusException;
+import mdt.cli.RepeatOptions;
 import mdt.model.MDTManager;
 import mdt.model.ResourceNotFoundException;
 import mdt.model.SubmodelService;
@@ -42,10 +38,9 @@ import mdt.tree.node.op.OperationEntityNode;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 /**
  * 지정된 MDTInstance의 MDT 모델 정보를 트리 형태로 출력하는 CLI 명령이다.
@@ -77,9 +72,7 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 	 * picocli가 주입하는 이 명령의 {@link CommandSpec}. 사용자 친화적 오류 메시지를 생성하기 위해
 	 * {@link CommandLine}을 얻을 때 사용한다.
 	 */
-	@Spec private CommandSpec m_spec;
-
-	@Parameters(index="0", paramLabel="id", description="MDTInstance id to show.")
+	@Parameters(index="0", paramLabel="instance-id", description="MDTInstance id to show.")
 	private String m_instanceId;
 
 	@Option(names={"--info", "-i"}, description="show MDTInfo")
@@ -94,9 +87,7 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 	@Option(names={"--compositions", "-c"}, description="show compositions")
 	private boolean m_compositions = false;
 
-	@Option(names={"--repeat", "-r"}, paramLabel="interval",
-			description="repeat interval (e.g. \"1s\", \"500ms\")")
-	private String m_repeat = null;
+	@Mixin private RepeatOptions m_repeatOpts;
 
 	@Option(names={"--verbose", "-v"}, description="verbose")
 	private boolean m_verbose = false;
@@ -121,8 +112,9 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 	/**
 	 * 명령을 실제로 수행한다.
 	 * <p>
-	 * {@code --repeat} 옵션이 지정되지 않은 경우에는 한 번만 정보를 출력하고 종료한다.
-	 * 지정된 경우에는 {@link PeriodicRefreshingConsole}을 이용해서 주어진 간격으로 화면을 갱신하며
+	 * {@code --repeat} 옵션이 지정되지 않은 경우에는 한 번만 정보를 출력하고 종료한다. 이때 정보를 가져오지 못하면
+	 * 예외가 그대로 전달된다({@code error:} 메시지와 종료 코드 1).
+	 * 지정된 경우에는 {@link RepeatOptions}을 이용해서 주어진 간격으로 화면을 갱신하며
 	 * 출력을 반복한다. 반복 출력 중 인스턴스가 실행 중이 아니거나 정보를 가져오는데 실패한 경우에는
 	 * 오류 메시지를 출력하고 다음 갱신을 기다린다.
 	 *
@@ -133,44 +125,8 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 	public void run(MDTManager mdt) throws Exception {
 		MDTInstanceManager manager = mdt.getInstanceManager();
 		
-		if ( m_repeat == null ) {
-			try ( PrintWriter pw = newStdoutWriter() ) {
-				MDTInstance instance = manager.getInstance(m_instanceId);
-				printOutput(instance, pw);
-			}
-			catch ( InvalidResourceStatusException expected ) {
-				System.err.println("instance is not running: id=" + m_instanceId);
-			}
-			catch ( Exception e ) {
-				System.err.printf("failed to get MDT model info: instance=%s, cause=%s%n", m_instanceId, e);
-			}
-			return;
-		}
-
-		Duration repeatInterval = UnitUtils.parseDuration(m_repeat);
-		PeriodicRefreshingConsole pwriter = new PeriodicRefreshingConsole(repeatInterval) {
-			@Override
-			protected void print(PrintWriter pw) {
-				try {
-					MDTInstance instance = manager.getInstance(m_instanceId);
-					printOutput(instance, pw);
-				}
-				catch ( InvalidResourceStatusException e ) {
-					pw.println("instance is not running: id=" + m_instanceId);
-				}
-				catch ( ResourceNotFoundException e ) {
-					pw.println("instance is not found: " + e.getMessage());
-				}
-				catch ( Exception e ) {
-					pw.printf("failed to get MDT model info: instance=%s, cause=%s%n", m_instanceId, e);
-				}
-			}
-		};
-		pwriter.setVerbose(m_verbose);
-		try {
-			pwriter.run();
-		}
-		catch ( CancellationException | InterruptedException e ) { }
+		m_repeatOpts.run(pw -> printOutput(manager.getInstance(m_instanceId), pw),
+						"get MDT info of " + m_instanceId, m_verbose);
 	}
 
 	private static final int MAX_TREE_DEPTH = 5;
@@ -198,8 +154,7 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 				nodes.add(buildParametersNode(instance));
 			}
 			catch ( ResourceNotFoundException e ) {
-				throw new CommandLine.ParameterException(getCommandLine(),
-														"No Data Submodel found in MDTInstance.");
+				throw usageError("No Data Submodel found in MDTInstance.");
 			}
 		}
 		if ( showOperations ) {
@@ -320,13 +275,4 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 		}
 	}
 
-	/**
-	 * 검증 메시지 발생용 {@link CommandLine}을 반환한다. picocli가 정상적으로 파싱한 경우 주입된
-	 * {@link #m_spec}에서 가져오고, 그렇지 않으면 새로 생성한 인스턴스를 사용한다.
-	 *
-	 * @return 이 명령에 연결된 {@link CommandLine}.
-	 */
-	private CommandLine getCommandLine() {
-		return (m_spec != null) ? m_spec.commandLine() : new CommandLine(this);
-	}
 }

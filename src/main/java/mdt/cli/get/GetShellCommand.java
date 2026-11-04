@@ -44,13 +44,13 @@ import picocli.CommandLine.Parameters;
 public class GetShellCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(GetShellCommand.class);
 
-	@Parameters(index="0", arity="1", paramLabel="id",
-				description="AssetAdministrationShell id (or MDTInstance id) to show")
-	private String m_aasId = null;
+	@Parameters(index="0", arity="1", paramLabel="aas-id|instance-id",
+				description="AssetAdministrationShell id (or its idShort, or MDTInstance id) to show")
+	private String m_target = null;
 
 	enum OutputTypes { table, json, desc };
 	@Option(names={"--output", "-o"}, paramLabel="type", required=false,
-			description="output type (candidnates: ${COMPLETION-CANDIDATES})")
+			description="output type (candidates: ${COMPLETION-CANDIDATES}, default: ${DEFAULT-VALUE})")
 	private OutputTypes m_output = OutputTypes.table;
 
 	public static final void main(String... args) throws Exception {
@@ -61,13 +61,13 @@ public class GetShellCommand extends AbstractMDTCommand {
 		setLogger(s_logger);
 	}
 	
-	private HttpMDTInstanceClient getAnyInstanceByAasIdShort(HttpMDTInstanceManager manager, String aasIdShort) {
-		List<MDTInstance> instList = manager.getInstanceAllByAasIdShort(m_aasId);
+	private HttpMDTInstanceClient getUniqueInstanceByAasIdShort(HttpMDTInstanceManager manager, String aasIdShort) {
+		List<MDTInstance> instList = manager.getInstanceAllByAasIdShort(aasIdShort);
 		if ( instList.size() == 1 ) {
 			return (HttpMDTInstanceClient)instList.get(0);
 		}
 		else  {
-			throw new ResourceNotFoundException("AssetAdministrationShell", "aasId=" + m_aasId);
+			throw new ResourceNotFoundException("AssetAdministrationShell", "idShort=" + aasIdShort);
 		}
 	}
 
@@ -75,13 +75,10 @@ public class GetShellCommand extends AbstractMDTCommand {
 	public void run(MDTManager mdt) throws Exception {
 		HttpMDTInstanceManager manager = (HttpMDTInstanceManager)mdt.getInstanceManager();
 		
-		HttpMDTInstanceClient instance = Try.of(() -> manager.getInstanceByAasId(m_aasId))
-											.recover(() -> getAnyInstanceByAasIdShort(manager, m_aasId))
-											.recover(() -> manager.getInstance(m_aasId))
+		HttpMDTInstanceClient instance = Try.of(() -> manager.getInstanceByAasId(m_target))
+											.recover(() -> getUniqueInstanceByAasIdShort(manager, m_target))
+											.recover(() -> manager.getInstance(m_target))
 											.get();
-		AssetAdministrationShellService aasSvc = instance.getAssetAdministrationShellService();
-		AssetAdministrationShell aas = aasSvc.getAssetAdministrationShell();
-			
 		switch ( m_output ) {
 			case desc:
 				displayDescriptor(instance);
@@ -93,23 +90,22 @@ public class GetShellCommand extends AbstractMDTCommand {
 				displayAsTable(instance);
 				break;
 			default:
-				System.err.println("Unknown output: " + m_output);
-				System.exit(-1);
+				throw new AssertionError("unknown output: " + m_output);
 		}
 	}
 	
-	private static void displayAsJson(HttpMDTInstanceClient instance) throws SerializationException {
+	private void displayAsJson(HttpMDTInstanceClient instance) throws SerializationException {
 		AssetAdministrationShellService aasSvc = instance.getAssetAdministrationShellService();
 		AssetAdministrationShell aas = aasSvc.getAssetAdministrationShell();
-		System.out.println(MDTModelSerDe.toJsonString(aas));
+		out().println(MDTModelSerDe.toJsonString(aas));
 	}
 	
-	private static void displayDescriptor(HttpMDTInstanceClient instance) throws SerializationException {
+	private void displayDescriptor(HttpMDTInstanceClient instance) throws SerializationException {
 		AssetAdministrationShellDescriptor desc = instance.getAASShellDescriptor();
-		System.out.println(MDTModelSerDe.toJsonString(desc));
+		out().println(MDTModelSerDe.toJsonString(desc));
 	}
 	
-	private static void displayAsTable(HttpMDTInstanceClient instance) {
+	private void displayAsTable(HttpMDTInstanceClient instance) {
 		AssetAdministrationShellService aasSvc = instance.getAssetAdministrationShellService();
 		AssetAdministrationShell aas = aasSvc.getAssetAdministrationShell();
 		
@@ -144,7 +140,7 @@ public class GetShellCommand extends AbstractMDTCommand {
 		String aasEp = DescriptorUtils.toAASServiceEndpointString(instance.getServiceEndpoint(), aas.getId());
 		table.addCell(" ENDPOINT "); table.addCell(" " + getOrEmpty(aasEp));
 		
-		System.out.println(table.render());
+		out().println(table.render());
 	}
 	
 	private static String getOrEmpty(Object obj) {

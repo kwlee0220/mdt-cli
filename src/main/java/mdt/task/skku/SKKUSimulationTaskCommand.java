@@ -2,7 +2,6 @@ package mdt.task.skku;
 
 import java.time.Duration;
 
-import utils.UnitUtils;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.MDTManager;
@@ -22,17 +21,17 @@ public class SKKUSimulationTaskCommand extends AbstractMDTCommand {
 			description="the reference to Simulation Submodel")
 	private String m_simSubmodelRefString;
 	
+	@Option(names={"--timeout"}, paramLabel="duration",
+			description="Invocation timeout (e.g. \"30s\", \"1m\", default: none)")
 	protected Duration m_timeout = null;
-	@Option(names={"--timeout"}, paramLabel="duration", description="Invocation timeout (e.g. \"30s\", \"1m\"")
-	public void setTimeout(String toStr) {
-		m_timeout = UnitUtils.parseDuration(toStr);
-	}
 
+	@Option(names={"--poll"}, paramLabel="duration",
+			description="Status polling interval (e.g. \"1s\", \"500ms\")")
 	private Duration m_pollInterval = SKKUSimulationTask.DEFAULT_POLL_INTERVAL;
-	@Option(names={"--pollInterval"}, paramLabel="duration",
-			description="Status polling interval (e.g. \"1s\", \"500ms\"")
-	public void setPollInterval(String intvStr) {
-		m_pollInterval = UnitUtils.parseDuration(intvStr);
+	/** 이전 옵션 이름 {@code --pollInterval}(도움말에는 표시하지 않는다). */
+	@Option(names={"--pollInterval"}, hidden=true)
+	private void setPollIntervalAlias(Duration interval) {
+		m_pollInterval = interval;
 	}
 
 	@Override

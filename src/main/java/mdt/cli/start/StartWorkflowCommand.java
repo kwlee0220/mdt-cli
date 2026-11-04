@@ -5,9 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.MDTManager;
@@ -37,8 +35,6 @@ public class StartWorkflowCommand extends AbstractMDTCommand {
 	 * picocli가 주입하는 이 명령의 {@link CommandSpec}. 사용자 친화적 오류 메시지를 생성하기 위해
 	 * {@link CommandLine}을 얻을 때 사용한다.
 	 */
-	@Spec private CommandSpec m_spec;
-
 	/** 시작할 워크플로우 모델의 식별자. 필수 인자. */
 	@Parameters(index="0", arity="1", paramLabel="model-id", description="Workflow model id to start")
 	private String m_wfModelId;
@@ -76,8 +72,7 @@ public class StartWorkflowCommand extends AbstractMDTCommand {
 			wf = wfMgr.startWorkflow(m_wfModelId);
 		}
 		catch ( ResourceNotFoundException e ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"Workflow model not found: " + m_wfModelId);
+			throw usageError("Workflow model not found: " + m_wfModelId);
 		}
 
 		printWorkflowSummary(wf);
@@ -89,19 +84,10 @@ public class StartWorkflowCommand extends AbstractMDTCommand {
 	 * @param wf 출력할 워크플로우.
 	 */
 	private void printWorkflowSummary(Workflow wf) {
-		System.out.printf("Started workflow:%n");
-		System.out.printf("  name:   %s%n", wf.getName());
-		System.out.printf("  model:  %s%n", wf.getModelId());
-		System.out.printf("  status: %s%n", wf.getStatus());
+		out().printf("Started workflow:%n");
+		out().printf("  name:   %s%n", wf.getName());
+		out().printf("  model:  %s%n", wf.getModelId());
+		out().printf("  status: %s%n", wf.getStatus());
 	}
 
-	/**
-	 * 검증 메시지 발생용 {@link CommandLine}을 반환한다. picocli가 정상적으로 파싱한 경우 주입된
-	 * {@link #m_spec}에서 가져오고, 그렇지 않으면 새로 생성한 인스턴스를 사용한다.
-	 *
-	 * @return 이 명령에 연결된 {@link CommandLine}.
-	 */
-	private CommandLine getCommandLine() {
-		return (m_spec != null) ? m_spec.commandLine() : new CommandLine(this);
-	}
 }

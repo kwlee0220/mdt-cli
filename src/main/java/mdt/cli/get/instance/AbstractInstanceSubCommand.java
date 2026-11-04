@@ -37,15 +37,18 @@ public abstract class AbstractInstanceSubCommand extends AbstractMDTCommand {
 
 	@ParentCommand GetInstanceCommand m_parent;
 	
-	@Option(names={"--output", "-o"}, paramLabel="type", defaultValue="tree", required=false,
-			description="output type (candidnates: 'tree' or 'json')")
-	private String m_output = "tree";
+	/** {@code --output} 값. */
+	enum OutputType { tree, json };
+	@Option(names={"--output", "-o"}, paramLabel="type",
+			description="output type (candidates: ${COMPLETION-CANDIDATES}, default: ${DEFAULT-VALUE})")
+	private OutputType m_output = OutputType.tree;
 	
 	@Option(names={"-v"}, description="verbose")
 	private boolean m_verbose = false;
 	
 	abstract protected Node toMDTModelNode(MDTInstance instance) throws IOException;
-	protected void displayAsJson(HttpMDTInstanceClient instance, PrintWriter pw) throws SerializationException, IOException { }
+	abstract protected void displayAsJson(HttpMDTInstanceClient instance, PrintWriter pw)
+		throws SerializationException, IOException;
 	
 	protected AbstractInstanceSubCommand() {
 		setLogger(s_logger);
@@ -56,22 +59,23 @@ public abstract class AbstractInstanceSubCommand extends AbstractMDTCommand {
 		StopWatch watch = StopWatch.start();
 		
 		HttpMDTInstanceClient inst = m_parent.getInstance(mdt);
-		try ( PrintWriter pw = newStdoutWriter() ) {
+		try ( PrintWriter pw = newOutWriter() ) {
 			switch ( m_output ) {
-				case "tree":
+				case tree:
 					displayAsTree(inst, pw);
 					break;
-				case "json":
+				case json:
 					displayAsJson(inst, pw);
 					break;
 				default:
-					throw new IllegalArgumentException("unsupported output type: " + m_output);
+					throw new AssertionError("unknown output: " + m_output);
 			}
 			
 			if ( m_verbose ) {
 				double elapsed = watch.getElapsedInFloatingSeconds();
 				String secStr = UnitUtils.toMillisString(Math.round(elapsed * 1000));
-				pw.println("elapsed: " + secStr);
+				// 표준 출력의 결과(JSON 등)와 섞이지 않도록 소요 시간은 표준 에러로 출력한다.
+				err().println("elapsed: " + secStr);
 			}
 		}
 	}

@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
-
-import utils.LoggerNameBuilder;
+import org.slf4j.LoggerFactory;
 
 import mdt.cli.AbstractMDTCommand;
 import mdt.model.InvalidResourceStatusException;
@@ -21,10 +21,8 @@ import mdt.model.instance.MDTInstanceStatus;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 
 /**
@@ -39,14 +37,10 @@ import picocli.CommandLine.Spec;
 	description = "Remove the MDT instance."
 )
 public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
-	private static final Logger s_logger = LoggerNameBuilder.from(RemoveMDTInstanceCommand.class)
-															.dropSuffix(2)
-															.append("unregister.mdt_instances")
-															.getLogger();
+	private static final Logger s_logger = LoggerFactory.getLogger(RemoveMDTInstanceCommand.class);
 	
-	@Spec private CommandSpec m_spec;
 	
-	@Parameters(index="0..*", paramLabel="ids",
+	@Parameters(index="0..*", paramLabel="instance-id",
 				description="MDTInstance ids to unregister. Required unless --all is specified.")
 	private List<String> m_instanceIds = new ArrayList<>();
 	
@@ -54,10 +48,10 @@ public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
 			description="remove all MDTInstances (cannot be combined with MDTInstance ids)")
 	private boolean m_removeAll;
 	
-	@Option(names={"--force", "-f"}, description="force to remove MDTInstances (eventhough they are running)")
+	@Option(names={"--force", "-f"}, description="force to remove MDTInstances (even though they are running)")
 	private boolean m_force;
 	
-	@Option(names={"--nthreads", "-n"}, defaultValue = "8",
+	@Option(names={"--nthreads", "-n"}, paramLabel="count", defaultValue = "8",
 			description="Thread pool size (default: ${DEFAULT-VALUE})")
 	private int m_nthreads = 8;
 	
@@ -76,10 +70,8 @@ public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
 	}
 
 	@Override
-	public void run() {
-		// MDTManager에 접속하기 전에 대상 지정을 검사한다.
+	protected void validate() {
 		validateRemoveTargets();
-		super.run();
 	}
 
 	@Override
@@ -89,8 +81,13 @@ public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
 		if ( m_removeAll ) {
 			if ( m_force ) {
 				// 실행 중인 인스턴스가 모두 정지된 뒤에 제거해야 하므로, 정지 완료까지 기다린다.
+				// 하나라도 정지하지 못했으면 전체 삭제를 하지 않는다.
 				List<MDTInstance> running = manager.getInstanceAllByFilter("instance.status = 'RUNNING'");
-				runConcurrently(running, this::stopIfRunning);
+				if ( !runConcurrently(running, this::stopIfRunning) ) {
+					err().println("not removing all MDTInstances: some running instances could not be stopped");
+					markFailed();
+					return;
+				}
 			}
 			manager.removeInstanceAll();
 		}
@@ -102,23 +99,29 @@ public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
 	/**
 	 * 주어진 대상마다 {@code task}를 스레드 풀에서 실행하고 모두 끝날 때까지 기다린다.
 	 * <p>
-	 * {@code task}는 자신의 오류를 직접 출력하고 {@link #markFailed()}로 기록해야 한다. 그래도 빠져나온
-	 * 예외는 여기서 출력하고 실패로 기록한다.
+	 * {@code task}는 성공 여부를 돌려주며, 실패할 때는 자신의 오류를 직접 출력하고 {@link #markFailed()}로 기록한다.
+	 * 그래도 빠져나온 예외는 여기서 출력하고 실패로 기록한다.
+	 *
+	 * @return	모든 대상이 성공했으면 {@code true}. 하나라도 실패했거나 기다리는 중 인터럽트되면 {@code false}.
 	 */
-	private <T> void runConcurrently(List<T> targets, Consumer<T> task) {
+	private <T> boolean runConcurrently(List<T> targets, Predicate<T> task) {
 		if ( targets.isEmpty() ) {
-			return;
+			return true;
 		}
 		
+		AtomicBoolean allSucceeded = new AtomicBoolean(true);
 		ExecutorService executor = Executors.newFixedThreadPool(Math.min(m_nthreads, targets.size()));
 		try {
 			for ( T target: targets ) {
 				executor.submit(() -> {
 					try {
-						task.accept(target);
+						if ( !task.test(target) ) {
+							allSucceeded.set(false);
+						}
 					}
 					catch ( RuntimeException e ) {
-						System.out.printf("failed to process MDTInstance: %s: cause %s%n", target, e);
+						err().printf("failed to process MDTInstance: %s: cause %s%n", target, e);
+						allSucceeded.set(false);
 						markFailed();
 					}
 				});
@@ -131,26 +134,30 @@ public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
 			}
 			catch ( InterruptedException e ) {
 				executor.shutdownNow();
+				allSucceeded.set(false);
 				markFailed();
 				Thread.currentThread().interrupt();
 			}
 		}
+		return allSucceeded.get();
 	}
 	
-	private void removeInstance(MDTInstanceManager manager, String instId) {
+	private boolean removeInstance(MDTInstanceManager manager, String instId) {
 		try {
 			if ( m_force ) {
 				// 없는 인스턴스는 여기서 ResourceNotFoundException이 발생한다.
 				MDTInstance inst = manager.getInstance(instId);
 				if ( !stopIfRunning(inst) ) {
-					return;
+					return false;
 				}
 			}
 			manager.removeInstance(instId);
+			return true;
 		}
 		catch ( Exception e ) {
-			System.out.printf("failed to remove MDTInstance: %s: cause %s%n", instId, e);
+			err().printf("failed to remove MDTInstance: %s: cause %s%n", instId, e);
 			markFailed();
+			return false;
 		}
 	}
 	
@@ -166,7 +173,7 @@ public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
 			if ( inst.isRunning() ) {
 				MDTInstanceStatus status = inst.stop(STOP_POLL_INTERVAL, null);
 				if ( status == MDTInstanceStatus.RUNNING ) {
-					System.out.printf("failed to stop MDTInstance: %s, status=%s%n", inst.getId(), status);
+					err().printf("failed to stop MDTInstance: %s, status=%s%n", inst.getId(), status);
 					markFailed();
 					return false;
 				}
@@ -183,7 +190,7 @@ public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
 			return false;
 		}
 		catch ( Exception e ) {
-			System.out.printf("failed to stop MDTInstance: %s: cause %s%n", inst.getId(), e);
+			err().printf("failed to stop MDTInstance: %s: cause %s%n", inst.getId(), e);
 			markFailed();
 			return false;
 		}
@@ -192,20 +199,14 @@ public class RemoveMDTInstanceCommand extends AbstractMDTCommand {
 	private void validateRemoveTargets() {
 		boolean hasInstanceIds = !m_instanceIds.isEmpty();
 		if ( m_removeAll && hasInstanceIds ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"Specify either MDTInstance ids or --all, not both.");
+			throw usageError("Specify either MDTInstance ids or --all, not both.");
 		}
 		if ( !m_removeAll && !hasInstanceIds ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"Specify at least one MDTInstance id or use --all.");
+			throw usageError("Specify at least one MDTInstance id or use --all.");
 		}
 		if ( m_nthreads < 1 ) {
-			throw new CommandLine.ParameterException(getCommandLine(),
-					"--nthreads must be greater than 0: " + m_nthreads);
+			throw usageError("--nthreads must be greater than 0: " + m_nthreads);
 		}
 	}
 
-	private CommandLine getCommandLine() {
-		return (m_spec != null) ? m_spec.commandLine() : new CommandLine(this);
-	}
 }

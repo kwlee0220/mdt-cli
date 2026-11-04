@@ -3,9 +3,7 @@ package mdt.cli.set;
 import mdt.cli.RefExprs;
 import mdt.model.MDTManager;
 import mdt.model.instance.MDTInstanceManager;
-import mdt.model.sm.ref.ElementReference;
 import mdt.model.sm.ref.ElementReferences;
-import mdt.model.sm.ref.SubmodelBasedElementReference;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -23,13 +21,13 @@ import picocli.CommandLine.Parameters;
 	description = "set SubmodelElement value."
 )
 public class SetElementCommand extends AbstractSetCommand {
-	@Parameters(index="0", paramLabel="instance", description="MDTInstance id to show.")
+	@Parameters(index="0", paramLabel="instance-id", description="Target MDTInstance id.")
 	private String m_instanceId;
 	
-	@Parameters(index="1", paramLabel="submodel", description="Target submodel idShort")
+	@Parameters(index="1", paramLabel="submodel-idShort", description="Target submodel idShort")
 	private String m_smIdShort;
 	
-	@Parameters(index="2", paramLabel="path", description="Target SubmodelElement idShortPath")
+	@Parameters(index="2", paramLabel="idShortPath", description="Target SubmodelElement idShortPath")
 	private String m_path;
 
 	@Override
@@ -37,10 +35,7 @@ public class SetElementCommand extends AbstractSetCommand {
 		MDTInstanceManager manager = mdt.getInstanceManager();
 		
 		String elmRef = RefExprs.elementRef(m_instanceId, m_smIdShort, m_path);
-		ElementReference smeRef = ElementReferences.parseExpr(elmRef);
-		((SubmodelBasedElementReference)smeRef).activate(manager);
-		
-		run(manager, smeRef);
+		run(manager, ElementReferences.parseExpr(elmRef));
 	}
 
 	public static void main(String... args) throws Exception {

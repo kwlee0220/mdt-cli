@@ -13,14 +13,14 @@
 
 1. **호출 형태**: `sbin/mdt <group> <subcommand> [args...] [options...]`
    (배포본에서는 `MDT_CLIENT_HOME`이 설정돼 있어야 하며 스크립트가 `mdt-cli-all.jar`를 구동한다.)
-2. **접속 대상**: 실행 중인 MDTManager. 접속 정보 우선순위 = `--client_conf <path>` →
+2. **접속 대상**: 실행 중인 MDTManager. 접속 정보 우선순위 = `--client-conf <path>` →
    `$MDT_CLIENT_HOME/mdt_client_config.yaml` → 환경변수 `MDT_URL`.
    - endpoint를 모르면 먼저 `mdt endpoints`로 확인한다.
 3. **결과를 파싱해야 하면 반드시 `-o json`(또는 `value`/`csv`)을 붙인다.** 기본 출력은 사람이 보는
    `table`/`tree`라 파싱에 부적합하다. (§3 참조)
 4. **대상 식별자를 모르면 먼저 조회 명령으로 탐색한다.** 인스턴스 id를 모르면
    `mdt list instances -o json`, 파라미터/오퍼레이션 이름을 모르면
-   `mdt get instance <id> parameters -o json` / `... operations -o json`.
+   `mdt get instance <instance-id> parameters -o json` / `... operations -o json`.
 
 ---
 
@@ -29,25 +29,25 @@
 | 하고 싶은 것 | 명령 |
 |--------------|------|
 | 인스턴스 목록/상태 확인 | `mdt list instances -o json` |
-| 특정 인스턴스 요약 | `mdt get instance <id> -o json` |
-| 인스턴스의 파라미터 목록 | `mdt get instance <id> parameters -o json` |
-| 인스턴스의 오퍼레이션 목록 | `mdt get instance <id> operations -o json` |
-| 인스턴스의 서브모델 목록 | `mdt get instance <id> submodels -o json` |
-| 파라미터 **값** 읽기 | `mdt get parameter <id> <param> -o value` |
+| 특정 인스턴스 요약 | `mdt get instance <instance-id> -o json` |
+| 인스턴스의 파라미터 목록 | `mdt get instance <instance-id> parameters -o json` |
+| 인스턴스의 오퍼레이션 목록 | `mdt get instance <instance-id> operations -o json` |
+| 인스턴스의 서브모델 목록 | `mdt get instance <instance-id> submodels -o json` |
+| 파라미터 **값** 읽기 | `mdt get parameter <instance-id> <parameter-id> -o value` |
 | 임의 SubmodelElement 값 읽기 | `mdt get element --ref <element-ref> -o value` |
-| 오퍼레이션 인자 값 읽기 | `mdt get argument <id> <op> <arg> -o value` |
-| 시계열 데이터 읽기(최근) | `mdt get timeseries <id> <ts-submodel> --last <n|dur> -o csv --header` |
-| 시계열 데이터 읽기(시각 기준) | `mdt get timeseries <id> <ts-submodel> --start <datetime> --count <n> -o csv --header` |
+| 오퍼레이션 인자 값 읽기 | `mdt get argument <instance-id> <operation-id> <argument-id> -o value` |
+| 시계열 데이터 읽기(최근) | `mdt get timeseries <instance-id> <submodel-idShort> --last <n|dur> -o csv --header` |
+| 시계열 데이터 읽기(시각 기준) | `mdt get timeseries <instance-id> <submodel-idShort> --start <datetime> --count <n> -o csv --header` |
 | 파일(File 요소) 내려받기 | `mdt get file <element-ref> -f <path>` |
-| 파라미터 **값** 쓰기 | `mdt set parameter <id> <param> --json '<json>'` |
-| SubmodelElement 값 쓰기 | `mdt set element <id> <submodel> <idShortPath> --json '<json>'` |
-| 오퍼레이션 인자 값 쓰기 | `mdt set argument <id> <op> <arg> --json '<json>'` |
-| File 요소에 파일 올리기 | `mdt set file <element-ref> <path> --mimeType <type>` |
-| AAS Operation 실행 | `mdt run operation <id> <submodel> <path> --in.<n> <expr> --out.<n> <ref> --showResult` |
-| AI/Simulation Submodel 실행 | `mdt run submodel <id> <submodel> --in.<n> <expr> --out.<n> <ref> --showResult` |
-| 인스턴스 기동/중지 | `mdt start instance <id...>` / `mdt stop instance <id...>` |
-| 인스턴스 등록/삭제 | `mdt add instance <id> <path>` / `mdt remove instance <id...>` |
-| 워크플로우 기동/중지 | `mdt start workflow <model-id>` / `mdt stop workflow <wf-id>` |
+| 파라미터 **값** 쓰기 | `mdt set parameter <instance-id> <parameter-id> --json '<json>'` |
+| SubmodelElement 값 쓰기 | `mdt set element <instance-id> <submodel-idShort> <idShortPath> --json '<json>'` |
+| 오퍼레이션 인자 값 쓰기 | `mdt set argument <instance-id> <operation-id> <argument-id> --json '<json>'` |
+| File 요소에 파일 올리기 | `mdt set file <element-ref> <path> --mime-type <type>` |
+| AAS Operation 실행 | `mdt run operation <instance-id> <submodel-idShort> <idShortPath> --in.<n> <expr> --out.<n> <ref> --show-result` |
+| AI/Simulation Submodel 실행 | `mdt run submodel <instance-id> <submodel-idShort> --in.<n> <expr> --out.<n> <ref> --show-result` |
+| 인스턴스 기동/중지 | `mdt start instance <instance-id...>` / `mdt stop instance <instance-id...>` |
+| 인스턴스 등록/삭제 | `mdt add instance <instance-id> <path>` / `mdt remove instance <instance-id...>` |
+| 워크플로우 기동/중지 | `mdt start workflow <model-id>` / `mdt stop workflow <workflow-name>` |
 | 참조식을 URL로 해석 | `mdt resolve reference <element-ref>` |
 | 시뮬레이션 실행 | `mdt simulation run <sim-id> -t <timeout>` |
 
@@ -130,16 +130,16 @@
 
 - `run submodel` 과 `run restful` 은 **`--inout.*` 미지원**(주면 오류).
 - `run set` 은 `--in.source <expr>` 와 `--out.target <ref>` 두 개가 사실상 필수.
-- 실행 결과값을 콘솔에서 보려면 `--showResult` 를 붙인다.
+- 실행 결과값을 콘솔에서 보려면 `--show-result` 를 붙인다.
 - 완료까지 대기가 길면 `--timeout <dur>`(예: `--timeout 5m`), 폴링 주기 `--poll <dur>`.
 
 예:
 ```bash
 # param:line01:temp 값을 입력으로 넣고, 결과를 param:line01:pred 에 기록
-mdt run submodel line01 Predict --in.input1 param:line01:temp --out.out1 param:line01:pred --showResult
+mdt run submodel line01 Predict --in.input1 param:line01:temp --out.out1 param:line01:pred --show-result
 
 # 리터럴 입력 + 결과 콘솔 출력
-mdt run operation line01 Ops predict --in.x 3 --in.y 4 --showResult
+mdt run operation line01 Ops predict --in.x 3 --in.y 4 --show-result
 ```
 
 ---
@@ -151,15 +151,15 @@ mdt run operation line01 Ops predict --in.x 3 --in.y 4 --showResult
 | 옵션 | 용도 |
 |------|------|
 | `--json '<json string>'` | 인라인 JSON (짧은 값에 권장) |
-| `--jsonFile <path>` | 파일에 담긴 JSON |
-| `--file <path> [--path <v>] [--mimeType <t>]` | File 요소 콘텐츠 |
+| `--json-file <path>` | 파일에 담긴 JSON |
+| `--file <path> [--path <v>] [--mime-type <t>]` | File 요소 콘텐츠 |
 
 `set file <element-ref> <path>` 는 예외적으로 소스 그룹을 쓰지 않고 위치 인자로 파일을 받는다.
 
 ```bash
 mdt set parameter line01 Temperature --json '25.3'
 mdt set element line01 Data DataInfo.status --json '"RUNNING"'
-mdt set file param:line01:manual ./manual.pdf --mimeType application/pdf
+mdt set file param:line01:manual ./manual.pdf --mime-type application/pdf
 ```
 
 ---
@@ -170,7 +170,7 @@ mdt set file param:line01:manual ./manual.pdf --mimeType application/pdf
 |--------|------------------|------|
 | `list *` | `-o JSON`(instances) / 대부분 `-t` 또는 CSV | instances만 JSON 지원, 나머지는 CSV(구분자 `-d`) |
 | `get instance`, `get shell`, `get submodel` | `-o json` | 기본 `table` |
-| `get instance <id> <sub>` (parameters/submodels/…) | `-o json` | 기본 `tree` |
+| `get instance <instance-id> <sub>` (parameters/submodels/…) | `-o json` | 기본 `tree` |
 | `get element/parameter/argument` | `-o value`(단일 값) 또는 `-o json` | 기본 `tree` |
 | `get timeseries` | `-o csv --header`(+`-d`) | `csv`,`table`,`json`,`value` 지원 |
 | `get wfmodel/workflow` | `-o json` | 기본 `table` |
@@ -182,7 +182,7 @@ mdt set file param:line01:manual ./manual.pdf --mimeType application/pdf
 ## 7. 자주 틀리는 지점 (gotchas)
 
 - **파싱 실패**: `-o json/value/csv` 를 빠뜨리면 사람이 보는 표/트리가 나온다. 항상 명시.
-- **`get instance <id> log` 는 `-o`/`-v` 옵션이 없다** (형제 하위명령과 달리 다른 베이스 클래스).
+- **`get instance <instance-id> log` 는 `-o`/`-v` 옵션이 없다** (형제 하위명령과 달리 다른 베이스 클래스).
 - **`run submodel`/`run restful` 에 `--inout.*` 금지.**
 - **`param:...:*`, `list ... -f/--glob`** 등 와일드카드는 셸 확장을 피하려 작은따옴표로 감싼다:
   `'param:line01:*'`, `-g 'line-*'`.
@@ -214,7 +214,7 @@ mdt get parameter line01 Temperature -o value
 mdt set parameter line01 Temperature --json '26.0'
 
 # 5) 연산 실행 후 결과 확인
-mdt run submodel line01 Predict --in.in1 param:line01:Temperature --out.out1 param:line01:Pred --showResult
+mdt run submodel line01 Predict --in.in1 param:line01:Temperature --out.out1 param:line01:Pred --show-result
 mdt get parameter line01 Pred -o value
 ```
 

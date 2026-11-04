@@ -36,9 +36,9 @@ public class AddMDTInstanceCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(AddMDTInstanceCommand.class);
 
 	/** 등록할 MDTInstance의 식별자. 필수 인자. */
-	@Parameters(index="0", arity="1", paramLabel="id",
+	@Parameters(index="0", arity="1", paramLabel="instance-id",
 				description="Identifier of the MDTInstance to register")
-	private String m_id;
+	private String m_instanceId;
 
 	/**
 	 * 등록할 구현체의 경로.
@@ -91,19 +91,19 @@ public class AddMDTInstanceCommand extends AbstractMDTCommand {
 	public void run(MDTManager manager) throws Exception {
 		MDTInstanceManager instanceManager = manager.getInstanceManager();
 		try {
-			instanceManager.addInstance(m_id, m_port, m_instanceFile);
+			instanceManager.addInstance(m_instanceId, m_port, m_instanceFile);
 			if ( m_verbose ) {
-				System.out.printf("Added MDTInstance: id=%s%n", m_id);
+				out().printf("Added MDTInstance: id=%s%n", m_instanceId);
 			}
 		}
 		catch ( ResourceAlreadyExistsException e ) {
-			System.err.printf("MDTInstance is already exist: id=%s.%n", m_id);
+			err().printf("MDTInstance already exists: id=%s.%n", m_instanceId);
 			markFailed();
 		}
 		catch ( MDTInstanceManagerException e ) {
 			Throwable cause = e.getCause();
-			System.err.printf("Failed to add MDTInstance: id=%s, cause=%s.%n",
-								m_id, (cause != null) ? cause.getMessage() : e.getMessage());
+			err().printf("Failed to add MDTInstance: id=%s, cause=%s.%n",
+								m_instanceId, (cause != null) ? cause.getMessage() : e.getMessage());
 			markFailed();
 		}
 	}

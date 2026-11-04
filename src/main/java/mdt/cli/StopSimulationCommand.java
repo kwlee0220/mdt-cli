@@ -15,9 +15,7 @@ import mdt.model.sm.simulation.Simulation;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 /**
  * 
@@ -38,12 +36,11 @@ public class StopSimulationCommand extends AbstractMDTCommand {
 	 * 얻어 {@link CommandLine.ParameterException}을 발생시키는 데 사용한다.
 	 * 직접 인스턴스화 등 picocli 파싱을 거치지 않은 경우 {@code null}일 수 있다.
 	 */
-	@Spec private CommandSpec m_spec;
 	
-	@Parameters(index="0", paramLabel="id", description="target Simulation Submodel (or MDTInstance) id")
+	@Parameters(index="0", paramLabel="instance-id|submodel-id", description="target MDTInstance id or Simulation Submodel id")
 	private String m_targetId;
 	
-	@Parameters(index="1", paramLabel="opId", description="target Simulation operation id")
+	@Parameters(index="1", paramLabel="operation-id", description="target Simulation operation id")
 	private String m_opId;
 
 	public static final void main(String... args) throws Exception {
@@ -63,8 +60,7 @@ public class StopSimulationCommand extends AbstractMDTCommand {
 		SubmodelService svc = inst.getSubmodelServiceById(m_targetId)
 							    .or(() -> inst.getSubmodelServiceByIdShort("Simulation"))
 							    .getOrThrow(() -> {
-									return new CommandLine.ParameterException(getCommandLine(),
-												String.format("no Simulation submodel found for id=%s", m_targetId));
+									return usageError(String.format("no Simulation submodel found for id=%s", m_targetId));
 							    });
 		
 		Submodel simModel = svc.getSubmodel();
@@ -78,30 +74,21 @@ public class StopSimulationCommand extends AbstractMDTCommand {
 		// 실패는 markFailed()로 기록하며, picocli가 getExitCode()를 종료 코드로 쓴다.
 		switch ( resp.getStatus() ) {
 			case CANCELLED:
-				System.out.println("Simulation is cancelled");
+				out().println("Simulation is cancelled");
 				break;
 			case COMPLETED:
 				// 취소 요청 전에 이미 끝난 경우.
-				System.out.println("Simulation completes");
+				out().println("Simulation completes");
 				break;
 			case RUNNING:
 				// 취소 요청은 받아들여졌지만 아직 종료되는 중인 경우.
-				System.out.println("Simulation cancellation is requested, but it is still running");
+				out().println("Simulation cancellation is requested, but it is still running");
 				break;
 			case FAILED:
-				System.out.printf("Simulation is failed: cause=%s%n", resp.getMessage());
+				out().printf("Simulation is failed: cause=%s%n", resp.getMessage());
 				markFailed();
 				break;
 		}
 	}
 
-	/**
-	 * 검증 메시지 발생용 {@link CommandLine}을 반환한다. picocli가 정상적으로 파싱한 경우
-	 * 주입된 {@link #m_spec}에서 가져오고, 그렇지 않으면 새로 생성한 인스턴스를 사용한다.
-	 *
-	 * @return 이 명령에 연결된 {@link CommandLine}.
-	 */
-	private CommandLine getCommandLine() {
-		return (m_spec != null) ? m_spec.commandLine() : new CommandLine(this);
-	}
 }

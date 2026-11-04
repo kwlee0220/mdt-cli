@@ -1,5 +1,7 @@
 package mdt.cli.get;
 
+import java.io.PrintWriter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +15,6 @@ import mdt.model.MDTManager;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.ref.ElementReference;
 import mdt.model.sm.ref.ElementReferences;
-import mdt.model.sm.ref.MDTElementReference;
 
 /**
  * 특정 MDTInstance에 속한 Submodel 또는 SubmodelElement의 정보를 조회하는 CLI 명령.
@@ -61,15 +62,15 @@ public class GetElementCommand extends AbstractGetElementCommand {
 	/** {@code instance submodel path} 위치 인자 묶음. */
 	static class PositionalSpec {
 		/** 조회 대상 MDTInstance의 식별자. */
-		@Parameters(index = "0", paramLabel = "instance", description = "MDTInstance id to show.")
+		@Parameters(index = "0", paramLabel = "instance-id", description = "MDTInstance id to show.")
 		private String instanceId;
 
 		/** 조회 대상 Submodel의 idShort. 필수. {@code "*"}를 명시하면 모든 Submodel을 의미한다. */
-		@Parameters(index = "1", paramLabel = "submodel", description = "Target submodel idShort")
+		@Parameters(index = "1", paramLabel = "submodel-idShort", description = "Target submodel idShort")
 		private String smIdShort;
 
 		/** 조회 대상 SubmodelElement의 idShortPath. 필수. {@code "*"}를 명시하면 Submodel 전체를 의미한다. */
-		@Parameters(index = "2", paramLabel = "path", description = "Target SubmodelElement idShortPath")
+		@Parameters(index = "2", paramLabel = "idShortPath", description = "Target SubmodelElement idShortPath")
 		private String path;
 	}
 
@@ -97,6 +98,10 @@ public class GetElementCommand extends AbstractGetElementCommand {
 	 * @param mdt 접속이 완료된 {@link MDTManager} 인스턴스.
 	 * @throws Exception 참조 파싱, 활성화, 또는 출력 중 발생한 예외.
 	 */
+	@Option(names={"--output", "-o"}, paramLabel="type",
+			description="output type (candidates: ${COMPLETION-CANDIDATES}, default: ${DEFAULT-VALUE})")
+	private ElementOutputType m_output = ElementOutputType.tree;
+
 	@Override
 	public void run(MDTManager mdt) throws Exception {
 		MDTInstanceManager manager = mdt.getInstanceManager();
@@ -110,9 +115,12 @@ public class GetElementCommand extends AbstractGetElementCommand {
 			elmRefExpr = RefExprs.elementRef(p.instanceId, p.smIdShort, p.path);
 		}
 
-		ElementReference smeRef = ElementReferences.parseExpr(elmRefExpr);
-		((MDTElementReference)smeRef).activate(manager);
+		// 활성화는 AbstractGetElementCommand.run()이 한다.
+		run(manager, ElementReferences.parseExpr(elmRefExpr));
+	}
 
-		run(manager, smeRef);
+	@Override
+	protected void printOutput(ElementReference smeRef, PrintWriter pw) throws Exception {
+		printElement(smeRef, pw, m_output);
 	}
 }

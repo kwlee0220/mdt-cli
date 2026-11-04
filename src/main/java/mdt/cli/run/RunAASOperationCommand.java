@@ -8,7 +8,6 @@ import java.util.Set;
 
 import org.eclipse.digitaltwin.aas4j.v3.model.Operation;
 import org.eclipse.digitaltwin.aas4j.v3.model.OperationVariable;
-import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +49,13 @@ import mdt.task.TaskArgument.ReferenceArgument;
 public class RunAASOperationCommand extends AbstractRunTaskCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(RunAASOperationCommand.class);
 
-	@Parameters(index="0", paramLabel="id", description="MDTInstance id.")
+	@Parameters(index="0", paramLabel="instance-id", description="MDTInstance id.")
 	private String m_instanceId;
 
 	@Parameters(index="1", paramLabel="submodel-idShort", description="Target submodel idShort")
 	private String m_submodelIdShort;
 
-	@Parameters(index="2", paramLabel="path", description="Target Operation element idShortPath")
+	@Parameters(index="2", paramLabel="idShortPath", description="Target Operation element idShortPath")
 	private String m_path;
 
 	public RunAASOperationCommand() {
@@ -107,24 +106,7 @@ public class RunAASOperationCommand extends AbstractRunTaskCommand {
 		return FStream.from(opSme.getInputVariables())
 						.tagKey(opv -> opv.getValue().getIdShort())
 						.match(inputCmdArgs)
-						.mapKeyValue((argId, match) -> {
-							SubmodelElement opvSme = match._1.getValue();
-							String argSpec = match._2;
-
-							try {
-								MDTElementReference ref = ElementReferences.parseExpr(argSpec);
-								return KeyValue.of(argId, TaskArgument.reference(ref));
-							}
-							catch ( MDTParserException expected ) {
-								// 참조 표현식이 아닌 경우는 연산 변수 타입에 맞는 리터럴로 해석한다.
-								try {
-									return KeyValue.of(argId, parseLiteralArgument(opvSme, argSpec));
-								}
-								catch ( IOException e ) {
-									return Throwables.sneakyThrow(e);
-								}
-							}
-						})
+						.mapKeyValue((argId, match) -> KeyValue.of(argId, toInputTaskArgument(match._1.getValue(), match._2)))
 						.toMap();
 	}
 
@@ -158,6 +140,5 @@ public class RunAASOperationCommand extends AbstractRunTaskCommand {
 
 	public static void main(String... args) throws Exception {
 		main(new RunAASOperationCommand(), args);
-		System.exit(0);
 	}
 }

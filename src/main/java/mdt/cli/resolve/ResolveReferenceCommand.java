@@ -21,17 +21,17 @@ import picocli.CommandLine.Parameters;
 	mixinStandardHelpOptions = true,
 	description = "Resolve ElementReference."
 )
-public class ResolveReferenceToUrlCommand extends AbstractMDTCommand {
-	private static final Logger s_logger = LoggerFactory.getLogger(ResolveReferenceToUrlCommand.class);
+public class ResolveReferenceCommand extends AbstractMDTCommand {
+	private static final Logger s_logger = LoggerFactory.getLogger(ResolveReferenceCommand.class);
 
 	@Parameters(index="0", arity="1", paramLabel="element-ref", description="Target element reference")
 	private String m_elmRef = null;
 
 	public static final void main(String... args) throws Exception {
-		main(new ResolveReferenceToUrlCommand(), args);
+		main(new ResolveReferenceCommand(), args);
 	}
 	
-	public ResolveReferenceToUrlCommand() {
+	public ResolveReferenceCommand() {
 		setLogger(s_logger);
 	}
 
@@ -40,6 +40,6 @@ public class ResolveReferenceToUrlCommand extends AbstractMDTCommand {
 		HttpMDTInstanceManager manager = (HttpMDTInstanceManager)mdt.getInstanceManager();
 		
 		String requestUrl = manager.resolveReferenceToUrl(m_elmRef);
-		System.out.println(requestUrl);
+		out().println(requestUrl);
 	}
 }

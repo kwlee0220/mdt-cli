@@ -16,7 +16,7 @@ import picocli.CommandLine.Parameters;
  * @author Kang-Woo Lee (ETRI)
  */
 @Command(
-	name = "suspend",
+	name = "workflow",
 	parameterListHeading = "Parameters:%n",
 	optionListHeading = "Options:%n",
 	mixinStandardHelpOptions = true,
@@ -25,7 +25,7 @@ import picocli.CommandLine.Parameters;
 public class SuspendWorkflowCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(SuspendWorkflowCommand.class);
 	
-	@Parameters(index="0", paramLabel="workflow-name", description="Workflow model id to suspend")
+	@Parameters(index="0", paramLabel="workflow-name", description="Workflow instance name to suspend")
 	private String m_wfName;
 
 	public static final void main(String... args) throws Exception {
@@ -41,6 +41,6 @@ public class SuspendWorkflowCommand extends AbstractMDTCommand {
 		WorkflowManager wfMgr = mdt.getWorkflowManager();
 		
 		Workflow wf = wfMgr.suspendWorkflow(m_wfName);
-		System.out.println(wf);
+		out().println(wf);
 	}
 }

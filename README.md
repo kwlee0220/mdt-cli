@@ -5,8 +5,8 @@ Manufacturing DigitalTwin(MDT) 시스템을 제어하기 위한 커맨드라인 
 시뮬레이션 등을 조회/등록/실행/제어한다.
 
 `picocli` 기반의 단일 진입점([`mdt`](src/main/java/mdt/cli/MDTCommandsMain.java)) 명령으로,
-여러 하위 명령 그룹(`list`, `get`, `add`, `set`, `remove`, `start`, `stop`, `run`, `resolve`,
-`simulation` 등)을 제공한다.
+여러 하위 명령 그룹(`list`, `get`, `add`, `set`, `remove`, `start`, `stop`, `suspend`, `resume`, `run`,
+`resolve`, `simulation` 등)을 제공한다.
 
 ## 요구 사항
 
@@ -42,7 +42,7 @@ Windows에서는 [`sbin/mdt.bat`](sbin/mdt.bat)을 사용한다.
 
 MDTManager 접속 정보는 다음 우선순위로 결정된다.
 
-1. `--client_conf <path>` 옵션으로 지정한 설정 파일
+1. `--client-conf <path>` 옵션으로 지정한 설정 파일
 2. `$MDT_CLIENT_HOME/mdt_client_config.yaml`
 3. 환경 변수 `MDT_URL` (endpoint URL)
 
@@ -73,6 +73,7 @@ gradle test
 | `set` | 요소/파라미터/인자/파일 값 설정 |
 | `remove` | 인스턴스, 파일, 워크플로우 모델/인스턴스 삭제 |
 | `start` / `stop` | 인스턴스 및 워크플로우 기동/중지 |
+| `suspend` / `resume` | 워크플로우 일시 정지/재개 |
 | `run` | AAS 오퍼레이션, 서브모델 실행 |
 | `resolve` | Reference를 URL로 해석 |
 | `simulation` | SKKU 시뮬레이션 등 시뮬레이션 제어 |

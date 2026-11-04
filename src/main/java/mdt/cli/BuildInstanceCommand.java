@@ -3,7 +3,6 @@ package mdt.cli;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
-import mdt.model.MDTManager;
 
 
 /**
@@ -31,10 +29,10 @@ import mdt.model.MDTManager;
 	mixinStandardHelpOptions = true,
 	description = "Build MDTInstance zip file."
 )
-public class BuildInstanceCommand extends AbstractMDTCommand {
+public class BuildInstanceCommand extends AbstractCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(BuildInstanceCommand.class);
 
-	@Parameters(index="0", paramLabel="id", description="MDTInstance identifier")
+	@Parameters(index="0", paramLabel="instance-id", description="MDTInstance identifier")
 	private String m_instanceId;
 
 	@Parameters(index="1", paramLabel="dir", description="Path to the MDTInstance directory")
@@ -45,20 +43,12 @@ public class BuildInstanceCommand extends AbstractMDTCommand {
 	}
 
 	/**
-	 * MDTManager에 접속하지 않고 zip 파일을 만든다(로컬 파일만 다루므로 접속이 필요 없다).
+	 * MDTManager에 접속하지 않고 zip 파일을 만든다(로컬 파일만 다룬다).
+	 *
+	 * @throws IOException	파일을 읽거나 zip 파일을 쓰지 못한 경우.
 	 */
 	@Override
-	public void run() {
-		try {
-			buildZipFile();
-		}
-		catch ( IOException e ) {
-			throw new UncheckedIOException(e);
-		}
-	}
-
-	@Override
-	public void run(MDTManager mdt) throws Exception {
+	protected void execute() throws IOException {
 		buildZipFile();
 	}
 	
@@ -84,11 +74,10 @@ public class BuildInstanceCommand extends AbstractMDTCommand {
 			}
 		}
 
-		System.out.println("MDTInstance zip file created: " + zipFile);
+		out().println("MDTInstance zip file created: " + zipFile);
 	}
 
 	public static void main(String... args) throws Exception {
 		main(new BuildInstanceCommand(), args);
-		System.exit(0);
 	}
 }

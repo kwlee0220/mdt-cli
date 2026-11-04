@@ -10,6 +10,7 @@ import utils.func.Try;
 import utils.stream.FStream;
 
 import mdt.cli.CommandCollection;
+import mdt.cli.CsvFormat;
 
 import picocli.CommandLine.Command;
 
@@ -29,8 +30,8 @@ import picocli.CommandLine.Command;
 		ListShellCommand.class,
 		ListSubmodelCommand.class,
 		ListOperationCommand.class,
-		ListWorkflowModelAllCommand.class,
-		ListWorkflowAllCommand.class,
+		ListWorkflowModelsCommand.class,
+		ListWorkflowsCommand.class,
 	})
 public class ListCommands extends CommandCollection {
 	public static final String DELIM = "|";
@@ -53,9 +54,7 @@ public class ListCommands extends CommandCollection {
 	
 		@Override
 		public void collectLine(Object[] cols) {
-			m_writer.println(FStream.of(cols)
-									.map(c -> Nullables.orElse(c,""))
-									.join(m_delim));
+			m_writer.println(CsvFormat.toLine(m_delim, cols));
 		}
 		
 		void addLine(String line) {

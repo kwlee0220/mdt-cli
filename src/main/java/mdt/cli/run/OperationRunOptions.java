@@ -29,8 +29,14 @@ public class OperationRunOptions {
 			description="Operation execution timeout (e.g. \"30s\", \"1m\"). default: no timeout")
 	private Duration m_timeout = null;
 
-	@Option(names={"--showResult", "--showResults"}, description="show output/inoutput operation variables")
+	@Option(names={"--show-result"}, description="show output/inoutput operation variables")
 	private boolean m_showResult = false;
+	
+	/** 이전 옵션 이름 {@code --showResult/--showResults}(도움말에는 표시하지 않는다). */
+	@Option(names={"--showResult", "--showResults"}, hidden=true)
+	private void setShowResultAlias(boolean showResult) {
+		m_showResult = showResult;
+	}
 
 	/**
 	 * 연산 실행 상태 확인 주기를 반환한다.
@@ -55,7 +61,7 @@ public class OperationRunOptions {
 	 *
 	 * @return	출력하는 경우는 {@code true}, 그렇지 않은 경우는 {@code false}.
 	 */
-	public boolean getShowResult() {
+	public boolean isShowResult() {
 		return m_showResult;
 	}
 }

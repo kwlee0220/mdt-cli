@@ -21,7 +21,7 @@ public final class TimeseriesSubmodelNodeFactories {
 		throw new AssertionError("Should not be called: class=" + getClass().getName());
 	}
 	
-	public static class RecordTransform implements DefaultNodeFactory {
+	public static class RecordNodeFactory implements DefaultNodeFactory {
 		@Override
 		public DefaultNode create(SubmodelElement sme) {
 			DefaultRecord rec = new DefaultRecord();

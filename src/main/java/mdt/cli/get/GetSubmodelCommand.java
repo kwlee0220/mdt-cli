@@ -42,14 +42,14 @@ public class GetSubmodelCommand extends AbstractMDTCommand {
 
 	@Parameters(index="0", arity="1", paramLabel="instance-id|submodel-id",
 				description="Target MDTInstance id or Submodel id to show")
-	private String m_id;
+	private String m_instanceOrSubmodelId;
 
-	@Parameters(index="1", arity="0..1", paramLabel="submodel-idshort",
-				description="Target Submodel idshort to show (used with instance-id)")
+	@Parameters(index="1", arity="0..1", paramLabel="submodel-idShort",
+				description="Target Submodel idShort to show (used with instance-id)")
 	private String m_smIdShort = null;
 	
 	@Option(names={"--output", "-o"}, paramLabel="type", required=false,
-			description="output type (candidnates: ${COMPLETION-CANDIDATES})")
+			description="output type (candidates: ${COMPLETION-CANDIDATES}, default: ${DEFAULT-VALUE})")
 	private OutputTypes m_output = OutputTypes.table;
 	
 	public GetSubmodelCommand() {
@@ -62,16 +62,16 @@ public class GetSubmodelCommand extends AbstractMDTCommand {
 		
 		SubmodelDescriptor smDesc;
 		if ( m_smIdShort != null ) {
-			MDTInstance instance = manager.getInstance(m_id);
+			MDTInstance instance = manager.getInstance(m_instanceOrSubmodelId);
 			smDesc = Funcs.findFirst(instance.getAASSubmodelDescriptorAll(),
 									desc -> m_smIdShort.equals(desc.getIdShort()));
 			if ( smDesc == null ) {
 				throw new ResourceNotFoundException("Submodel",
-													"instance-id=" + m_id + ", idShort=" + m_smIdShort);
+													"instance-id=" + m_instanceOrSubmodelId + ", idShort=" + m_smIdShort);
 			}
 		}
 		else {
-			smDesc = mdt.getSubmodelRegistry().getSubmodelDescriptorById(m_id);
+			smDesc = mdt.getSubmodelRegistry().getSubmodelDescriptorById(m_instanceOrSubmodelId);
 		}
 		
 		switch ( m_output ) {
@@ -81,18 +81,18 @@ public class GetSubmodelCommand extends AbstractMDTCommand {
 			case json:
 				String smEp = DescriptorUtils.getEndpointString(smDesc.getEndpoints());
 				if ( smEp == null ) {
-					System.err.println("No endpoint info in the SubmodelDescriptor: " + smDesc.getId());
-					System.exit(-1);
+					err().println("No endpoint info in the SubmodelDescriptor: " + smDesc.getId());
+					markFailed();
+					return;
 				}
 				Submodel sm = AASUtils.newSubmodelService(smEp).getSubmodel();
 				displaySubmodel(sm);
 				break;
 			case desc:
-				displayAsJson(smDesc);
+				displayDescriptor(smDesc);
 				break;
 			default:
-				System.err.println("Unknown output: " + m_output);
-				System.exit(-1);
+				throw new AssertionError("unknown output: " + m_output);
 		}
 	}
 
@@ -100,15 +100,15 @@ public class GetSubmodelCommand extends AbstractMDTCommand {
 		main(new GetSubmodelCommand(), args);
 	}
 	
-	private void displayAsJson(SubmodelDescriptor smDesc)
+	private void displayDescriptor(SubmodelDescriptor smDesc)
 		throws SerializationException {
 		JsonSerializer ser = new JsonSerializer();
 		String jsonStr = ser.write(smDesc);
-		System.out.println(jsonStr);
+		out().println(jsonStr);
 	}
 	private void displaySubmodel(Submodel sm) {
 		String jsonStr = MDTModelSerDe.toJsonString(sm);
-		System.out.println(jsonStr);
+		out().println(jsonStr);
 	}
 	
 	private void displayAsTable(SubmodelDescriptor smDesc) {
@@ -132,7 +132,7 @@ public class GetSubmodelCommand extends AbstractMDTCommand {
 		String endpoint = DescriptorUtils.getEndpointString(smDesc.getEndpoints());
 		table.addCell(" ENDPOINT "); table.addCell(" " + getOrEmpty(endpoint));
 		
-		System.out.println(table.render());
+		out().println(table.render());
 	}
 	
 	private String getOrEmpty(Object obj) {

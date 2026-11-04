@@ -3,10 +3,8 @@ package mdt.cli.list;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.barfuin.texttree.api.TextTree;
@@ -22,15 +20,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 
 import utils.InternalException;
-import utils.StopWatch;
-import utils.UnitUtils;
 import utils.Utilities;
 import utils.http.RESTfulIOException;
 import utils.stream.FStream;
 import utils.func.Nullables;
 
 import mdt.cli.AbstractMDTCommand;
-import mdt.cli.PeriodicRefreshingConsole;
+import mdt.cli.CsvFormat;
+import mdt.cli.RepeatOptions;
 import mdt.cli.list.Nodes.InstanceNode;
 import mdt.cli.list.Nodes.RootNode;
 import mdt.client.instance.HttpMDTInstanceClient;
@@ -38,12 +35,12 @@ import mdt.client.instance.HttpMDTInstanceManager;
 import mdt.model.MDTManager;
 import mdt.model.MDTModelSerDe;
 import mdt.model.ReferenceUtils;
-import mdt.model.ResourceNotFoundException;
 import mdt.model.instance.InstanceDescriptor;
 import mdt.model.instance.MDTInstance;
 import mdt.model.instance.MDTInstanceStatus;
 
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Option;
 
 /**
@@ -109,12 +106,7 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 			description="force 'TABLE' format output. Takes precedence over --output regardless of order.")
 	private boolean m_forceTable = false;
 
-	/**
-	 * 주기적 갱신 간격(예: {@code "1s"}, {@code "500ms"}). {@code null}이면 단발 실행.
-	 */
-	@Option(names={"--repeat", "-r"}, paramLabel="interval",
-			description="repeat interval (e.g. \"1s\", \"500ms\")")
-	private String m_repeat = null;
+	@Mixin private RepeatOptions m_repeatOpts;
 
 	/** 자세한 정보 출력 여부. {@code CSV}/{@code TABLE} 출력에만 유효. */
 	@Option(names={"--long", "-l"}, description="show detailed information. valid only for CSV and TABLE output")
@@ -148,7 +140,7 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 	 * 명령의 본체. 인스턴스 목록을 조회하여 선택된 형식으로 출력한다.
 	 * <p>
 	 * {@code --repeat}이 지정되지 않은 경우 한 번 출력하고 경과 시간을 함께 표시한다. 지정된
-	 * 경우 {@link PeriodicRefreshingConsole}을 통해 주기적으로 화면을 갱신한다.
+	 * 경우 {@link RepeatOptions}을 통해 주기적으로 화면을 갱신한다.
 	 *
 	 * @param mdt 부모 클래스가 접속을 완료한 {@link MDTManager}.
 	 * @throws Exception 출력 또는 주기 실행 중 발생한 예외.
@@ -162,41 +154,7 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 
 		HttpMDTInstanceManager manager = (HttpMDTInstanceManager)mdt.getInstanceManager();
 
-		if ( m_repeat == null ) {
-			StopWatch watch = StopWatch.start();
-			try ( PrintWriter pw = newStdoutWriter() ) {
-				printOutput(manager, pw);
-				watch.stop();
-			}
-			// 소요 시간은 '-v'일 때만 표준 에러로 출력한다(표준 출력의 CSV·JSON을 파싱하는 경우를 위해).
-			if ( m_verbose ) {
-				System.err.printf("elapsed: %.3f%n", watch.getElapsedInFloatingSeconds());
-			}
-			return;
-		}
-		else {
-			Duration repeatInterval = UnitUtils.parseDuration(m_repeat);
-			PeriodicRefreshingConsole pwriter = new PeriodicRefreshingConsole(repeatInterval) {
-				@Override
-				protected void print(PrintWriter pw) throws InterruptedException {
-					try {
-						printOutput(manager, pw);
-					}
-					catch ( InterruptedException e ) {
-						Thread.currentThread().interrupt();
-						throw e;
-					}
-					catch ( Exception e ) {
-						pw.println("failed to list MDTInstances: cause=" + e);
-					}
-				}
-			};
-			pwriter.setVerbose(m_verbose);
-			try {
-				pwriter.run();
-			}
-			catch ( CancellationException | InterruptedException e ) { }
-		}
+		m_repeatOpts.run(pw -> printOutput(manager, pw), "list MDTInstances", m_verbose);
 	}
 
 	/**
@@ -235,18 +193,14 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 				}
 			}
 		}
-		catch ( ResourceNotFoundException e ) {
-			pw.println("failed to list MDTInstances: " + Nullables.orElse(e.getCause(), e));
-		}
 		catch ( RESTfulIOException e ) {
-			Throwable cause = e.getCause();
-			if ( cause instanceof InterruptedIOException ) {
+			// 반복 출력 중 종료 키로 대기가 인터럽트된 경우는 반복을 멈추도록 InterruptedException으로 바꾼다.
+			// 그 밖의 오류는 호출자(RepeatOptions)가 처리한다.
+			if ( e.getCause() instanceof InterruptedIOException ) {
 				Thread.currentThread().interrupt();
 				throw new InterruptedException("interrupted while listing MDTInstances");
 			}
-			else {
-				pw.println("failed to list MDTInstances: " + Nullables.orElse(cause, e));
-			}
+			throw e;
 		}
 	}
 
@@ -256,10 +210,7 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 	private void printShortCsv(List<? extends MDTInstance> instances, PrintWriter pw) {
 		int seqNo = 1;
 		for ( MDTInstance inst : instances ) {
-			pw.append(""+seqNo).append(m_delimiter);
-			pw.append(inst.getId()).append(m_delimiter);
-			pw.append(inst.getStatus().toString());
-			pw.println();
+			pw.println(CsvFormat.toLine(m_delimiter, seqNo, inst.getId(), inst.getStatus()));
 			++seqNo;
 		}
 	}
@@ -290,8 +241,7 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 		int seqNo = 1;
 		for ( MDTInstance inst : instances ) {
 			Object[] cells = toLongColumns(seqNo, inst, "%d");
-			String line = FStream.of(cells).map(Object::toString).join(m_delimiter);
-			pw.println(line);
+			pw.println(CsvFormat.toLine(m_delimiter, cells));
 			++seqNo;
 		}
 	}
@@ -356,12 +306,10 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 	 * (그리고 자신도 실행 중인) 자식들을 부모 아래로 옮긴다. 트리 스타일은 OS에 따라 다르게 적용된다.
 	 */
 	private void printTree(List<? extends MDTInstance> instances, PrintWriter pw) {
-		Nodes.s_showEndpoint = m_showEndpoint;
-
 		// take a snapshot
 		Map<String,InstanceNode> nodes = FStream.from(instances)
 												.castSafely(HttpMDTInstanceClient.class)
-												.map(InstanceNode::new)
+												.map(inst -> new InstanceNode(inst, m_showEndpoint))
 												.tagKey(InstanceNode::getId)
 												.toMap();
 

@@ -49,7 +49,7 @@ public class SetTaskCommand extends DynamicArgumentsCommand {
 		checkArgumentNames("input", cmdArgs.getInputs(), Set.of(SetTask.ARG_SOURCE));
 		checkArgumentNames("output", cmdArgs.getOutputs(), Set.of(SetTask.ARG_TARGET));
 		if ( !cmdArgs.getInoutputs().isEmpty() ) {
-			throw new IllegalArgumentException("inoutput arguments are not supported: "
+			throw usageError("inoutput arguments are not supported: "
 												+ cmdArgs.getInoutputs().keySet());
 		}
 
@@ -57,11 +57,11 @@ public class SetTaskCommand extends DynamicArgumentsCommand {
 		// 불친절한 오류를 발생시키기 때문에, 인자 누락 여부를 먼저 확인한다.
 		String srcExpr = cmdArgs.getInputs().get(SetTask.ARG_SOURCE);
 		if ( srcExpr == null ) {
-			throw new IllegalArgumentException("'--in." + SetTask.ARG_SOURCE + "' argument is not specified");
+			throw usageError("'--in." + SetTask.ARG_SOURCE + "' argument is not specified");
 		}
 		String tarExpr = cmdArgs.getOutputs().get(SetTask.ARG_TARGET);
 		if ( tarExpr == null ) {
-			throw new IllegalArgumentException("'--out." + SetTask.ARG_TARGET + "' argument is not specified");
+			throw usageError("'--out." + SetTask.ARG_TARGET + "' argument is not specified");
 		}
 
 		TaskArgument src = TaskArgument.parseExpr(srcExpr);
@@ -79,6 +79,5 @@ public class SetTaskCommand extends DynamicArgumentsCommand {
 
 	public static void main(String... args) throws Exception {
 		main(new SetTaskCommand(), args);
-		System.exit(0);
 	}
 }

@@ -6,10 +6,12 @@ import java.util.List;
 
 import org.barfuin.texttree.api.Node;
 import org.eclipse.digitaltwin.aas4j.v3.dataformat.core.SerializationException;
+import org.eclipse.digitaltwin.aas4j.v3.model.SubmodelElement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import utils.func.Funcs;
+import utils.func.Try;
 import utils.stream.FStream;
 
 import mdt.client.instance.HttpMDTInstanceClient;
@@ -27,7 +29,11 @@ import mdt.tree.node.TerminalNode;
 import picocli.CommandLine.Command;
 
 /**
- * 
+ * MDTInstance의 파라미터 목록과 현재 값을 출력하는 {@code get instance <instance-id> parameters} 명령.
+ * <p>
+ * 트리 출력에서는 파라미터 값을 먼저 모두 읽은 뒤 그 결과로 트리를 만든다. 값을 읽지 못한 파라미터는
+ * 해당 노드에 {@code error} 항목으로 원인을 보인다.
+ *
  * @author Kang-Woo Lee (ETRI)
  */
 @Command(
@@ -39,10 +45,6 @@ import picocli.CommandLine.Command;
 )
 public class GetInstanceParametersCommand extends AbstractInstanceSubCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(GetInstanceParametersCommand.class);
-	
-	private HttpMDTInstanceManager m_manager;
-	private List<MDTParameterService> m_parameters;
-	private MDTParameterDescriptorListNode m_paramNodes;
 
 	public static final void main(String... args) throws Exception {
 		main(new GetInstanceParametersCommand(), args);
@@ -55,34 +57,46 @@ public class GetInstanceParametersCommand extends AbstractInstanceSubCommand {
 	@Override
 	protected void displayAsJson(HttpMDTInstanceClient instance, PrintWriter pw)
 		throws SerializationException, IOException {
-		List<MDTParameterDescriptor> descList = Funcs.map(m_parameters, MDTParameterService::getDescriptor);
+		List<MDTParameterDescriptor> descList = Funcs.map(instance.getParameterServiceAll(),
+														MDTParameterService::getDescriptor);
 		String json = MDTModelSerDe.JSON_SERIALIZER.writeList(descList);
 		pw.println(json);
 	}
 
 	@Override
 	protected Node toMDTModelNode(MDTInstance instance) throws IOException {
-		m_manager = (HttpMDTInstanceManager)instance.getInstanceManager();
-		
-		 // parameter nodes
-		if ( m_paramNodes == null ) {
-			m_parameters = instance.getParameterServiceAll();
-			m_paramNodes = new MDTParameterDescriptorListNode(instance.getId(), m_parameters);
-		}
-		
-		return m_paramNodes;
+		HttpMDTInstanceManager manager = (HttpMDTInstanceManager)instance.getInstanceManager();
+		List<ParameterNode> paramNodes = FStream.from(instance.getParameterServiceAll())
+												.map(param -> new ParameterNode(param.getDescriptor(),
+																				readValue(param, manager)))
+												.toList();
+		return new ParameterListNode(paramNodes);
 	}
 	
-	private class MDTParameterDescriptorListNode extends ListNode {
-		private List<ParameterNode> m_paramNodes;
+	/**
+	 * 파라미터의 현재 값을 읽는다.
+	 *
+	 * @param param		대상 파라미터.
+	 * @param manager	참조 활성화에 쓸 인스턴스 매니저.
+	 * @return	읽은 값 또는 실패 원인.
+	 */
+	private Try<SubmodelElement> readValue(MDTParameterService param, HttpMDTInstanceManager manager) {
+		MDTParameterReference ref = param.getReference();
+		return Try.of(() -> {
+			if ( !ref.isActivated() ) {
+				ref.activate(manager);
+			}
+			return ref.read();
+		});
+	}
+	
+	private static class ParameterListNode extends ListNode {
+		private final List<ParameterNode> m_paramNodes;
 		
-		public MDTParameterDescriptorListNode(String instId, List<MDTParameterService> parameters) {
+		ParameterListNode(List<ParameterNode> paramNodes) {
 			setTitle("Parameters");
 			setRepeatable(true);
-			
-			m_paramNodes = FStream.from(parameters)
-									.map(ParameterNode::new)
-									.toList();
+			m_paramNodes = paramNodes;
 		}
 		
 		@Override
@@ -91,13 +105,14 @@ public class GetInstanceParametersCommand extends AbstractInstanceSubCommand {
 		}
 	}
 	
-	private class ParameterNode extends DefaultNode {
+	/** 이미 읽은 파라미터 값(또는 실패 원인)을 보이는 노드. 원격 조회를 하지 않는다. */
+	private static class ParameterNode extends DefaultNode {
 		private final MDTParameterDescriptor m_paramDesc;
-		private final MDTParameterReference m_paramRef;
+		private final Try<SubmodelElement> m_value;
 		
-		public ParameterNode(MDTParameterService param) {
-			m_paramDesc = param.getDescriptor();
-			m_paramRef = param.getReference();
+		ParameterNode(MDTParameterDescriptor paramDesc, Try<SubmodelElement> value) {
+			m_paramDesc = paramDesc;
+			m_value = value;
 			
 			setTitle(m_paramDesc.getId());
 			setValueType(String.format(" (%s)", m_paramDesc.getValueType()));
@@ -109,16 +124,15 @@ public class GetInstanceParametersCommand extends AbstractInstanceSubCommand {
 			TerminalNode nameNode = new TerminalNode("name", "", m_paramDesc.getName());
 			TerminalNode refNode = new TerminalNode("reference", "", m_paramDesc.getReference());
 			TerminalNode epNode = new TerminalNode("endpoint", "", m_paramDesc.getEndpoint());
-			try {
-				if ( !m_paramRef.isActivated() ) {
-					m_paramRef.activate(m_manager);
-				}
-				DefaultNode valueNode = DefaultNodeFactories.create(m_paramRef.read());
+			if ( m_value.isSuccessful() ) {
+				DefaultNode valueNode = DefaultNodeFactories.create(m_value.get());
 				valueNode.setTitle("value");
 				return List.of(nameNode, refNode, epNode, valueNode);
 			}
-			catch ( Throwable e ) {
-				return List.of(refNode);
+			else {
+				Throwable cause = m_value.getCause();
+				TerminalNode errorNode = new TerminalNode("error", "", "" + cause);
+				return List.of(nameNode, refNode, epNode, errorNode);
 			}
 		}
 	}

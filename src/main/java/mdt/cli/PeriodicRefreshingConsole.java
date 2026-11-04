@@ -41,6 +41,7 @@ public abstract class PeriodicRefreshingConsole extends PeriodicLoopExecution<Vo
 	private ConsoleQuitKeyDetector m_quitDetector = new ConsoleQuitKeyDetector(QUIT_CHARACTERS);
 	private final MovingAverage m_mavg = new MovingAverage(DEFAULT_MAVG_ALPHA);
 	private boolean m_verbose = false;
+	private volatile boolean m_loopFinished = false;
 
 	/**
 	 * 매 주기마다 콘솔에 표시할 내용을 인자로 전달된 {@link PrintWriter}에 출력한다.
@@ -85,14 +86,14 @@ public abstract class PeriodicRefreshingConsole extends PeriodicLoopExecution<Vo
 	}
 
 	/**
-	 * 종료 문자가 감지되었을 때 실행할 콜백을 설정한다.
+	 * 종료 문자 감지기가 끝났을 때 호출할 리스너를 추가한다.
 	 * <p>
-	 * 기본적으로는 {@link #initializeLoop()}에서 현재 스레드를 인터럽트하는 콜백이 설정된다.
+	 * {@link #initializeLoop()}가 루프 스레드를 인터럽트하는 리스너를 기본으로 추가한다.
 	 *
-	 * @param callback 종료 시 호출할 콜백.
+	 * @param callback 종료 시 호출할 리스너.
 	 */
-	public void setQuitCallback(Runnable callback) {
-		m_quitDetector.setCancelCallback(callback);
+	public void addQuitListener(Runnable callback) {
+		m_quitDetector.addQuitListener(callback);
 	}
 
 	/**
@@ -114,7 +115,13 @@ public abstract class PeriodicRefreshingConsole extends PeriodicLoopExecution<Vo
 	@Override
 	protected void initializeLoop() throws Exception {
 		final Thread currentThread = Thread.currentThread();
-		setQuitCallback(currentThread::interrupt);
+		// 감지기는 finalizeLoop()에서 멈출 때도 종료 리스너를 부르므로, 루프가 끝난 뒤에는 인터럽트하지 않는다
+		// (그렇지 않으면 명령을 실행한 스레드에 인터럽트 플래그가 남는다).
+		addQuitListener(() -> {
+			if ( !m_loopFinished ) {
+				currentThread.interrupt();
+			}
+		});
 
 		m_quitDetector.startAsync();
 	}
@@ -177,6 +184,7 @@ public abstract class PeriodicRefreshingConsole extends PeriodicLoopExecution<Vo
 	 */
 	@Override
 	protected void finalizeLoop() {
+		m_loopFinished = true;
 		m_quitDetector.stopAsync();
 	}
 }

@@ -16,7 +16,7 @@ import picocli.CommandLine.Parameters;
  * @author Kang-Woo Lee (ETRI)
  */
 @Command(
-	name = "resume",
+	name = "workflow",
 	parameterListHeading = "Parameters:%n",
 	optionListHeading = "Options:%n",
 	mixinStandardHelpOptions = true,
@@ -25,7 +25,7 @@ import picocli.CommandLine.Parameters;
 public class ResumeWorkflowCommand extends AbstractMDTCommand {
 	private static final Logger s_logger = LoggerFactory.getLogger(ResumeWorkflowCommand.class);
 	
-	@Parameters(index="0", paramLabel="workflow-name", description="Workflow model id to resume")
+	@Parameters(index="0", paramLabel="workflow-name", description="Workflow instance name to resume")
 	private String m_wfName;
 
 	public static final void main(String... args) throws Exception {
@@ -41,6 +41,6 @@ public class ResumeWorkflowCommand extends AbstractMDTCommand {
 		WorkflowManager wfMgr = mdt.getWorkflowManager();
 		
 		Workflow wf = wfMgr.resumeWorkflow(m_wfName);
-		System.out.println(wf);
+		out().println(wf);
 	}
 }
