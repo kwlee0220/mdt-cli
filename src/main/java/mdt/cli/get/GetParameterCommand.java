@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
+import mdt.cli.RefExprs;
 import mdt.model.MDTManager;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.ref.ElementReferences;
@@ -39,7 +40,7 @@ public class GetParameterCommand extends AbstractGetElementCommand {
 	public void run(MDTManager mdt) throws Exception {
 		MDTInstanceManager manager = mdt.getInstanceManager();
 		
-		String elmRef = String.format("param:%s:%s", m_instanceId, m_parameterId);
+		String elmRef = RefExprs.parameterRef(m_instanceId, m_parameterId);
 		MDTElementReference smeRef = ElementReferences.parseExpr(elmRef);
 		smeRef.activate(manager);
 		

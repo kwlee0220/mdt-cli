@@ -8,6 +8,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import mdt.cli.RefExprs;
 import mdt.model.MDTManager;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.ref.ElementReference;
@@ -106,7 +107,7 @@ public class GetElementCommand extends AbstractGetElementCommand {
 		}
 		else {
 			PositionalSpec p = m_target.positional;
-			elmRefExpr = String.format("%s:%s:%s", p.instanceId, p.smIdShort, p.path);
+			elmRefExpr = RefExprs.elementRef(p.instanceId, p.smIdShort, p.path);
 		}
 
 		ElementReference smeRef = ElementReferences.parseExpr(elmRefExpr);

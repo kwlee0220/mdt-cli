@@ -21,6 +21,7 @@ import mdt.cli.AbstractMDTCommand;
 import mdt.cli.IdPair;
 import mdt.client.instance.HttpMDTInstanceClient;
 import mdt.client.instance.HttpMDTInstanceManager;
+import mdt.model.AASUtils;
 import mdt.model.MDTManager;
 import mdt.model.MDTModelSerDe;
 import mdt.model.ReferenceUtils;
@@ -112,7 +113,7 @@ public class GetInstanceCommand extends AbstractMDTCommand {
 		
 		AssetAdministrationShellDescriptor aasDesc = instance.getAASShellDescriptor();
 		table.addCell(" AAS_ID "); table.addCell(" " + IdPair.of(aasDesc.getId(), aasDesc.getIdShort()) + " ");
-		table.addCell(" AAS_ID_ENCODED "); table.addCell(" " + aasDesc.getId() + " ");
+		table.addCell(" AAS_ID_ENCODED "); table.addCell(" " + AASUtils.encodeBase64UrlSafe(aasDesc.getId()) + " ");
 		table.addCell(" ID_SHORT "); table.addCell(" " + getOrEmpty(aasDesc.getIdShort()) + " ");
 		table.addCell(" GLOBAL_ASSET_ID "); table.addCell(" " + getOrEmpty(aasDesc.getGlobalAssetId()) + " ");
 		table.addCell(" ASSET_TYPE "); table.addCell(" " + getOrEmpty(aasDesc.getAssetType()) + " ");

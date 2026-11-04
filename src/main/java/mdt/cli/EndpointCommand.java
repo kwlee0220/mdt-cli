@@ -42,10 +42,12 @@ public class EndpointCommand extends AbstractMDTCommand {
 				})
 				.ifAbsent(() -> {
 					System.err.println("Cannot get MDTManager's endpoint");
+					markFailed();
 				});
 		}
 		catch ( IOException e ) {
 			System.err.printf("Failed to read client configuration from %s: %s%n", CLIENT_CONFIG_FILE, e.getMessage());
+			markFailed();
 		}
 	}
 

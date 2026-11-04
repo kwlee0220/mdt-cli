@@ -19,6 +19,7 @@ import utils.KeyValue;
 import utils.Throwables;
 import utils.stream.FStream;
 
+import mdt.cli.RefExprs;
 import mdt.model.expr.MDTParserException;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.ref.ElementReferences;
@@ -55,7 +56,7 @@ public class RunAASOperationCommand extends AbstractRunTaskCommand {
 	@Parameters(index="1", paramLabel="submodel-idShort", description="Target submodel idShort")
 	private String m_submodelIdShort;
 
-	@Parameters(index="2", paramLabel="path", defaultValue="*", description="Target SubmodelElement idShortPath")
+	@Parameters(index="2", paramLabel="path", description="Target Operation element idShortPath")
 	private String m_path;
 
 	public RunAASOperationCommand() {
@@ -65,7 +66,7 @@ public class RunAASOperationCommand extends AbstractRunTaskCommand {
 	@Override
 	protected AbstractOperationTask newTask(MDTInstanceManager manager, TaskCommandArguments cmdArgs,
 											Duration pollInterval, Duration timeout) {
-		String opRefStr = String.format("%s:%s:%s", m_instanceId, m_submodelIdShort, m_path);
+		String opRefStr = RefExprs.elementRef(m_instanceId, m_submodelIdShort, m_path);
 		MDTElementReference opRef = ElementReferences.parseExpr(opRefStr);
 
 		// 일부 태스크 인자의 값이 문자열인 경우, AAS OperationVariable의 데이터 타입에 맞게 변환하여

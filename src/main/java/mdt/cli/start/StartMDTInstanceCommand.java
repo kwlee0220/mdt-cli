@@ -160,6 +160,7 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 		List<HttpMDTInstanceClient> instList = new ArrayList<>();
 		if ( m_startAll ) {
 			FStream.from(manager.getInstanceAll())
+					.cast(HttpMDTInstanceClient.class)
 					.filter(inst -> inst.getStatus() != MDTInstanceStatus.RUNNING)
 					.forEach(instList::add);
 		}
@@ -171,6 +172,7 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 				}
 				catch ( ResourceNotFoundException e ) {
 					System.out.println("No such MDTInstance: " + id);
+					markFailed();
 				}
 			}
 		}
@@ -181,7 +183,7 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 						.startTimeout(m_timeout)
 						.concurrency(m_nthreads)
 						.recursive(m_recursive)
-						.statusListener(StartMDTInstanceCommand::printInstanceStatus)
+						.statusListener(this::printInstanceStatus)
 						.run();
 	}
 
@@ -224,12 +226,13 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 	
 	/**
 	 * {@link #main(String...)} 예제에서 사용되는 상태 변경 리스너. 인스턴스의 현재 상태를
-	 * 사람이 읽기 쉬운 메시지로 표준 출력에 출력한다.
+	 * 사람이 읽기 쉬운 메시지로 표준 출력에 출력한다. 시작에 실패한 인스턴스가 있으면 명령의 실패로 기록한다
+	 * ({@link #markFailed()}).
 	 *
 	 * @param inst		상태가 변경된 인스턴스.
 	 * @param status	새 상태.
 	 */
-	private static void printInstanceStatus(MDTInstance inst, MDTInstanceStatus status) {
+	private void printInstanceStatus(MDTInstance inst, MDTInstanceStatus status) {
 		switch ( status ) {
 			case STARTING:
 				System.out.println("MDTInstance starting: " + inst.getId());
@@ -239,10 +242,12 @@ public class StartMDTInstanceCommand extends AbstractMDTCommand {
 				break;
 			case FAILED:
 				System.out.println("MDTInstance failed to start: " + inst.getId());
+				markFailed();
 				break;
 			default:
 				System.out.println("MDTInstance failed to start: " + inst.getId()
 									+ ", unexpected state: " + status);
+				markFailed();
 				break;
 		}
 	}

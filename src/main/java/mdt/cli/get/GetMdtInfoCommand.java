@@ -134,7 +134,7 @@ public class GetMdtInfoCommand extends AbstractMDTCommand {
 		MDTInstanceManager manager = mdt.getInstanceManager();
 		
 		if ( m_repeat == null ) {
-			try ( PrintWriter pw = new PrintWriter(System.out, true) ) {
+			try ( PrintWriter pw = newStdoutWriter() ) {
 				MDTInstance instance = manager.getInstance(m_instanceId);
 				printOutput(instance, pw);
 			}

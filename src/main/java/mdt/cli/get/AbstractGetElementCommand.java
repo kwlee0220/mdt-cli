@@ -50,7 +50,7 @@ public abstract class AbstractGetElementCommand extends AbstractMDTCommand {
 			if ( elmRef instanceof MDTElementReference iref && !iref.isActivated()) {
 				iref.activate(manager);
 			}
-			try ( PrintWriter pw = new PrintWriter(System.out, true) ) {
+			try ( PrintWriter pw = newStdoutWriter() ) {
 				printOutput(elmRef, pw);
 			}
 			return;

@@ -1,7 +1,10 @@
 package mdt.cli;
 
 import java.io.File;
+import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.time.Duration;
 
 import org.slf4j.LoggerFactory;
@@ -22,6 +25,7 @@ import ch.qos.logback.classic.Logger;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.IExitCodeGenerator;
 import picocli.CommandLine.Option;
 
 
@@ -40,9 +44,11 @@ import picocli.CommandLine.Option;
 // 하위 명령의 '-V/--version'도 루트 명령과 같은 버전을 출력하도록 버전 제공자를 지정한다.
 // (picocli는 상위 클래스의 @Command 속성을 하위 클래스에 상속한다.)
 @Command(versionProvider = MDTVersionProvider.class)
-public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
+public abstract class AbstractMDTCommand implements Runnable, IExitCodeGenerator, LoggerSettable {
 	private static final org.slf4j.Logger s_logger = LoggerFactory.getLogger(AbstractMDTCommand.class);
 	private org.slf4j.Logger m_logger;
+	/** 명령의 종료 코드. 실행 중 실패를 기록하면 0이 아닌 값이 된다(작업 스레드에서도 기록할 수 있다). */
+	private volatile int m_exitCode = 0;
 	
 	private static final String CLIENT_CONFIG_FILE = "mdt_client_config.yaml";
 
@@ -82,14 +88,14 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 	
 	public FOption<File> getClientConfigFile() {
 		if ( m_clientConfigFile != null ) {
-			getLogger().debug("from option '--client_conf %s", m_clientConfigFile.getAbsolutePath());
+			getLogger().debug("from option '--client_conf': {}", m_clientConfigFile.getAbsolutePath());
 			return FOption.of(m_clientConfigFile);
 		}
 		
 		// 그렇지 않은 경우는 설정 정보를 사용하거나 환경 변수를 활용하여 MDT Manager에 접속한다.
 		File clientConfigFile = FileUtils.path(MDTCommandsMain.getClientHomeDir(), CLIENT_CONFIG_FILE);
 		if ( clientConfigFile.canRead() ) {
-			getLogger().debug("from environment-var(%s) %s", "MDT_CLIENT_HOME", clientConfigFile.getAbsolutePath());
+			getLogger().debug("from environment-var({}): {}", "MDT_CLIENT_HOME", clientConfigFile.getAbsolutePath());
 			return FOption.of(clientConfigFile);
 		}
 		
@@ -99,7 +105,7 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 	public FOption<MDTClientConfig> getClientConfig() throws IOException {
 		return getClientConfigFile()
 					.mapOrThrow(file -> {
-						getLogger().debug("loading client config from file: %s", file.getAbsolutePath());
+						getLogger().debug("loading client config from file: {}", file.getAbsolutePath());
                         return MDTClientConfig.load(file);
 					})
 					.or(() -> {
@@ -107,7 +113,7 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 						// endpoint 정보를 사용하여 접속을 시도한다.
 						return FOption.ofNullable(System.getenv("MDT_URL"))
 										.map(url -> {
-											getLogger().debug("loading client config from environment variable 'MDT_URL': %s", url);
+											getLogger().debug("loading client config from environment variable 'MDT_URL': {}", url);
 											return MDTClientConfig.of(url);
 										});
 					});
@@ -134,6 +140,32 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 	public void setLogger(org.slf4j.Logger logger) {
 		m_logger = logger;
 	}
+
+	/**
+	 * 명령의 종료 코드를 반환한다.
+	 * <p>
+	 * picocli의 {@link CommandLine#execute(String...)}와 {@link #main(AbstractMDTCommand, String...)}가 이 값을
+	 * 프로세스 종료 코드로 사용한다. 실패가 기록되지 않았으면 {@code 0}이다.
+	 *
+	 * @return	종료 코드.
+	 */
+	@Override
+	public int getExitCode() {
+		return m_exitCode;
+	}
+
+	/**
+	 * 명령 실행 중 실패가 있었음을 기록한다.
+	 * <p>
+	 * 예외를 던지지 않고 오류 메시지만 출력한 뒤 계속 진행하는 명령(예: 여러 인스턴스 중 일부만 실패)이
+	 * 호출한다. 이후 {@link #getExitCode()}는 {@link #EXIT_CODE_FAILURE}를 반환한다.
+	 */
+	protected void markFailed() {
+		m_exitCode = EXIT_CODE_FAILURE;
+	}
+
+	/** 실행 중 실패가 기록된 명령의 종료 코드. */
+	protected static final int EXIT_CODE_FAILURE = 1;
 
 	/**
 	 * 명령 실행 진입점.
@@ -190,6 +222,29 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 	}
 
 	/**
+	 * 표준 출력({@link System#out})에 쓰는 {@link PrintWriter}를 만든다.
+	 * <p>
+	 * 반환된 writer를 닫으면 남은 내용을 flush만 하고 {@link System#out}은 닫지 않는다. 따라서
+	 * try-with-resources로 써도 이후의 표준 출력(로그의 콘솔 출력 등)이 사라지지 않는다.
+	 *
+	 * @return	표준 출력용 {@link PrintWriter}.
+	 */
+	protected static PrintWriter newStdoutWriter() {
+		OutputStream closeShield = new FilterOutputStream(System.out) {
+			@Override
+			public void write(byte[] b, int off, int len) throws IOException {
+				out.write(b, off, len);
+			}
+
+			@Override
+			public void close() throws IOException {
+				flush();
+			}
+		};
+		return new PrintWriter(closeShield, true);
+	}
+
+	/**
 	 * CLI 진입점 공통 메인 함수.
 	 * <p>
 	 * picocli {@link CommandLine}을 구성하고 인자를 파싱한 뒤, 도움말 요청이면 사용법을 표준 출력으로
@@ -201,6 +256,7 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 	 *       출력하지 않는다.</li>
 	 * </ul>
 	 * 두 경우 모두 종료 코드 {@code -1}로 프로세스를 종료한다.
+	 * 예외 없이 끝났더라도 명령이 실패를 기록했으면({@link #markFailed()}) {@link #getExitCode()}로 종료한다.
 	 * <p>
 	 * 다음 picocli 기본 동작이 적용된다.
 	 * <ul>
@@ -230,6 +286,9 @@ public abstract class AbstractMDTCommand implements Runnable, LoggerSettable {
 			}
 			else {
 				cmd.run();
+				if ( cmd.getExitCode() != 0 ) {
+					System.exit(cmd.getExitCode());
+				}
 			}
 		}
 		catch ( CommandLine.ParameterException e ) {

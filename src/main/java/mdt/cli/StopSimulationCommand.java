@@ -75,21 +75,23 @@ public class StopSimulationCommand extends AbstractMDTCommand {
 		HttpSimulationClient simulation = new HttpSimulationClient(client.getHttpClient(), endpoint);
 		
 		OperationStatusResponse<Void> resp = simulation.cancelSimulation(m_opId);
+		// 실패는 markFailed()로 기록하며, picocli가 getExitCode()를 종료 코드로 쓴다.
 		switch ( resp.getStatus() ) {
+			case CANCELLED:
+				System.out.println("Simulation is cancelled");
+				break;
 			case COMPLETED:
+				// 취소 요청 전에 이미 끝난 경우.
 				System.out.println("Simulation completes");
-				System.exit(0);
+				break;
+			case RUNNING:
+				// 취소 요청은 받아들여졌지만 아직 종료되는 중인 경우.
+				System.out.println("Simulation cancellation is requested, but it is still running");
 				break;
 			case FAILED:
 				System.out.printf("Simulation is failed: cause=%s%n", resp.getMessage());
-				System.exit(-1);
+				markFailed();
 				break;
-			case CANCELLED:
-				System.out.println("Simulation is cancelled");
-				System.exit(-1);
-				break;
-			default:
-				throw new AssertionError();
 		}
 	}
 

@@ -1,5 +1,6 @@
 package mdt.cli.set;
 
+import mdt.cli.RefExprs;
 import mdt.model.MDTManager;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.ref.ElementReference;
@@ -31,7 +32,7 @@ public class SetParameterCommand extends AbstractSetCommand {
 	protected void run(MDTManager mdt) throws Exception {
 		MDTInstanceManager manager = mdt.getInstanceManager();
 		
-		String elmRef = String.format("param:%s:%s", m_instanceId, m_parameterId);
+		String elmRef = RefExprs.parameterRef(m_instanceId, m_parameterId);
 		ElementReference smeRef = ElementReferences.parseExpr(elmRef);
 		
 		run(manager, smeRef);

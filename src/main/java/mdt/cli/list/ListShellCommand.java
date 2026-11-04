@@ -69,7 +69,7 @@ public class ListShellCommand extends AbstractMDTCommand {
 		MDTInstanceManager manager = mdt.getInstanceManager();
 
 		if ( m_repeat == null ) {
-			try ( PrintWriter pw = new PrintWriter(System.out, true) ) {
+			try ( PrintWriter pw = newStdoutWriter() ) {
 				printOutput(manager, pw);
 			}
 			return;

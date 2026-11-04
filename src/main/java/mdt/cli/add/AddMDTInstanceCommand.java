@@ -98,11 +98,13 @@ public class AddMDTInstanceCommand extends AbstractMDTCommand {
 		}
 		catch ( ResourceAlreadyExistsException e ) {
 			System.err.printf("MDTInstance is already exist: id=%s.%n", m_id);
+			markFailed();
 		}
 		catch ( MDTInstanceManagerException e ) {
 			Throwable cause = e.getCause();
 			System.err.printf("Failed to add MDTInstance: id=%s, cause=%s.%n",
 								m_id, (cause != null) ? cause.getMessage() : e.getMessage());
+			markFailed();
 		}
 	}
 }

@@ -75,7 +75,7 @@ public class ListWorkflowAllCommand extends AbstractMDTCommand {
 		WorkflowManager wfManager = mdt.getWorkflowManager();
 
 		if ( m_repeat == null ) {
-			try ( PrintWriter pw = new PrintWriter(System.out, true) ) {
+			try ( PrintWriter pw = newStdoutWriter() ) {
 				printOutput(wfManager, pw);
 			}
 			return;

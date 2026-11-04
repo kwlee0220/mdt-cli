@@ -133,8 +133,8 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 	@Option(names={"--show-endpoint"}, description="show endpoint for running MDT instances. valid only for TREE output")
 	private boolean m_showEndpoint = false;
 
-	/** 주기적 갱신 모드에서의 verbose 출력 여부. */
-	@Option(names={"-v"}, description="verbose")
+	/** verbose 출력 여부. 단발 실행에서는 소요 시간을 표준 에러로, 주기적 갱신 모드에서는 화면 아래에 출력한다. */
+	@Option(names={"-v"}, description="verbose (print elapsed time)")
 	private boolean m_verbose = false;
 
 	/**
@@ -164,12 +164,13 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 
 		if ( m_repeat == null ) {
 			StopWatch watch = StopWatch.start();
-			try ( PrintWriter pw = new PrintWriter(System.out, true) ) {
+			try ( PrintWriter pw = newStdoutWriter() ) {
 				printOutput(manager, pw);
 				watch.stop();
-
-				double elapsed = watch.getElapsedInFloatingSeconds();
-				pw.printf("elapsed: %.3f%n", elapsed);
+			}
+			// 소요 시간은 '-v'일 때만 표준 에러로 출력한다(표준 출력의 CSV·JSON을 파싱하는 경우를 위해).
+			if ( m_verbose ) {
+				System.err.printf("elapsed: %.3f%n", watch.getElapsedInFloatingSeconds());
 			}
 			return;
 		}
@@ -208,12 +209,9 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 	private void printOutput(HttpMDTInstanceManager manager, PrintWriter pw) throws InterruptedException {
 		try {
 			List<HttpMDTInstanceClient> instances;
-			if ( m_filter != null ) {
-				instances = manager.getInstanceAllByFilter(m_filter);
-			}
-			else {
-				instances = manager.getInstanceAll();
-			}
+			List<MDTInstance> found = ( m_filter != null ) ? manager.getInstanceAllByFilter(m_filter)
+															: manager.getInstanceAll();
+			instances = FStream.from(found).cast(HttpMDTInstanceClient.class).toList();
 			
 			// 인스턴스의 식별자를 기준으로 정렬한다.
 			instances.sort((a, b) -> a.getId().compareTo(b.getId()));
@@ -339,10 +337,10 @@ public class ListMDTInstanceCommand extends AbstractMDTCommand {
 			String json;
 			if ( m_prettyPrint ) {
 				json = MDTModelSerDe.MAPPER.writerWithDefaultPrettyPrinter()
-											.writeValueAsString(modelsNode) + System.lineSeparator();
+											.writeValueAsString(modelsNode);
 			}
 			else {
-				json = MDTModelSerDe.MAPPER.writeValueAsString(modelsNode) + System.lineSeparator();
+				json = MDTModelSerDe.MAPPER.writeValueAsString(modelsNode);
 			}
 			pw.println(json);
 		}

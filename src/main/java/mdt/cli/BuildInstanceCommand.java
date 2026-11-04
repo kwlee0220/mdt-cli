@@ -1,11 +1,13 @@
 package mdt.cli;
 
 import java.io.BufferedOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -42,27 +44,47 @@ public class BuildInstanceCommand extends AbstractMDTCommand {
 		setLogger(s_logger);
 	}
 
+	/**
+	 * MDTManager에 접속하지 않고 zip 파일을 만든다(로컬 파일만 다루므로 접속이 필요 없다).
+	 */
+	@Override
+	public void run() {
+		try {
+			buildZipFile();
+		}
+		catch ( IOException e ) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
 	@Override
 	public void run(MDTManager mdt) throws Exception {
-        Path zipFile = Paths.get(String.format("%s.zip", m_instanceId));
+		buildZipFile();
+	}
+	
+	private void buildZipFile() throws IOException {
+		if ( !Files.isDirectory(m_instanceDir) ) {
+			throw new IllegalArgumentException("Not a directory: " + m_instanceDir);
+		}
+		
+		Path zipFile = Paths.get(String.format("%s.zip", m_instanceId)).toAbsolutePath().normalize();
+		try ( ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(zipFile)));
+				Stream<Path> paths = Files.walk(m_instanceDir) ) {
+			for ( Path path: (Iterable<Path>)paths::iterator ) {
+				// 대상 디렉토리 안에서 실행하면 만들고 있는 zip 파일 자신도 탐색되므로 제외한다.
+				if ( !Files.isRegularFile(path) || path.toAbsolutePath().normalize().equals(zipFile) ) {
+					continue;
+				}
+				
+				// zip 항목 이름은 OS와 상관없이 '/'로 구분한다.
+				String entryName = m_instanceDir.relativize(path).toString().replace(File.separatorChar, '/');
+				zos.putNextEntry(new ZipEntry(entryName));
+				Files.copy(path, zos);
+				zos.closeEntry();
+			}
+		}
 
-        try (ZipOutputStream zos = new ZipOutputStream(
-                new BufferedOutputStream(Files.newOutputStream(zipFile)))) {
-            Files.walk(m_instanceDir)
-                 .filter(path -> !Files.isDirectory(path))
-                 .forEach(path -> {
-                     ZipEntry zipEntry = new ZipEntry(m_instanceDir.relativize(path).toString());
-                     try {
-                         zos.putNextEntry(zipEntry);
-                         Files.copy(path, zos);
-                         zos.closeEntry();
-                     } catch (IOException e) {
-                         throw new UncheckedIOException(e);
-                     }
-                 });
-        }
-
-        System.out.println("MDTInstance zip file created: " + zipFile.toAbsolutePath());
+		System.out.println("MDTInstance zip file created: " + zipFile);
 	}
 
 	public static void main(String... args) throws Exception {

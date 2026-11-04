@@ -16,6 +16,7 @@ import utils.KeyValue;
 import utils.Throwables;
 import utils.stream.KeyValueFStream;
 
+import mdt.cli.RefExprs;
 import mdt.model.expr.MDTParserException;
 import mdt.model.instance.MDTInstanceManager;
 import mdt.model.sm.SubmodelUtils;
@@ -70,7 +71,7 @@ public class RunOperationSubmodelCommand extends AbstractRunTaskCommand {
 			throw new IllegalArgumentException("inoutput argument is not supported for OperationSubmodelTask");
 		}
 
-		String smRefStr = String.format("%s:%s", m_instanceId, m_submodelIdShort);
+		String smRefStr = RefExprs.submodelRef(m_instanceId, m_submodelIdShort);
 		DefaultSubmodelReference smRef = ElementReferences.parseSubmodelExpr(smRefStr);
 
 		// Submodel의 인자 기술자 로딩한다.

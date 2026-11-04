@@ -64,7 +64,7 @@ public class GetSubmodelCommand extends AbstractMDTCommand {
 		if ( m_smIdShort != null ) {
 			MDTInstance instance = manager.getInstance(m_id);
 			smDesc = Funcs.findFirst(instance.getAASSubmodelDescriptorAll(),
-									desc -> desc.getIdShort().equals(m_smIdShort));
+									desc -> m_smIdShort.equals(desc.getIdShort()));
 			if ( smDesc == null ) {
 				throw new ResourceNotFoundException("Submodel",
 													"instance-id=" + m_id + ", idShort=" + m_smIdShort);
@@ -123,6 +123,10 @@ public class GetSubmodelCommand extends AbstractMDTCommand {
 		if ( semanticId != null ) {
 			String msg = String.format(" (%s) %s", ReferenceUtils.getShortSubmodelSemanticId(semanticId), semanticId);
 			table.addCell(msg);
+		}
+		else {
+			// 값 칸을 비워 두어야 다음 행이 한 칸씩 밀리지 않는다.
+			table.addCell("");
 		}
 		
 		String endpoint = DescriptorUtils.getEndpointString(smDesc.getEndpoints());

@@ -56,7 +56,7 @@ public abstract class AbstractInstanceSubCommand extends AbstractMDTCommand {
 		StopWatch watch = StopWatch.start();
 		
 		HttpMDTInstanceClient inst = m_parent.getInstance(mdt);
-		try ( PrintWriter pw = new PrintWriter(System.out, true) ) {
+		try ( PrintWriter pw = newStdoutWriter() ) {
 			switch ( m_output ) {
 				case "tree":
 					displayAsTree(inst, pw);

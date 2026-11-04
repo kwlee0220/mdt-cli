@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import utils.func.Try;
 import utils.stream.FStream;
 
+import mdt.model.instance.MDTInstance;
 import mdt.cli.AbstractMDTCommand;
 import mdt.client.instance.HttpMDTInstanceClient;
 import mdt.client.instance.HttpMDTInstanceManager;
@@ -61,7 +62,7 @@ public class GetShellCommand extends AbstractMDTCommand {
 	}
 	
 	private HttpMDTInstanceClient getAnyInstanceByAasIdShort(HttpMDTInstanceManager manager, String aasIdShort) {
-		List<HttpMDTInstanceClient> instList = manager.getInstanceAllByAasIdShort(m_aasId);
+		List<MDTInstance> instList = manager.getInstanceAllByAasIdShort(m_aasId);
 		if ( instList.size() == 1 ) {
 			return (HttpMDTInstanceClient)instList.get(0);
 		}
