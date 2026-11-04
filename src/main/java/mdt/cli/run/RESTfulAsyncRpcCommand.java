@@ -155,10 +155,17 @@ public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 			shutdownQuietly(httpClient);
 		}
 
-		// 아래 match()는 양쪽에 모두 존재하는 이름만 처리하기 때문에, 요청한 출력 변수 중 응답에 포함되지
-		// 않은 것과 요청하지 않았는데 응답에 포함된 것은 조용히 무시된다. 이를 사용자에게 알린다.
-		warnUnmatchedOutputs("missing in the rpc response", outArgs.keySet(), outValues.keySet());
-		warnUnmatchedOutputs("not requested but returned", outValues.keySet(), outArgs.keySet());
+		// 아래 match()는 양쪽에 모두 존재하는 이름만 처리한다. 요청한 출력이 응답에 없으면 대상 값이 갱신되지
+		// 않으므로 실패로 기록하고, 요청하지 않았는데 응답에 포함된 출력은 경고만 남긴다.
+		List<String> missings = findUnmatched(outArgs.keySet(), outValues.keySet());
+		if ( !missings.isEmpty() ) {
+			err().printf("Requested output argument(s) missing in the rpc response: %s%n", missings);
+			markFailed();
+		}
+		List<String> extras = findUnmatched(outValues.keySet(), outArgs.keySet());
+		if ( !extras.isEmpty() ) {
+			getLogger().warn("output operation variable(s) not requested but returned: {}", extras);
+		}
 
 		// 출력 변수의 값을 수집된 출력 값으로 갱신한다.
 		KeyValueFStream.from(outArgs)
@@ -198,14 +205,11 @@ public class RESTfulAsyncRpcCommand extends DynamicArgumentsCommand {
 		httpClient.connectionPool().evictAll();
 	}
 
-	private void warnUnmatchedOutputs(String reason, Set<String> argIds, Set<String> counterparts) {
-		List<String> unmatcheds = FStream.from(argIds)
-										.filterNot(counterparts::contains)
-										.sort()
-										.toList();
-		if ( !unmatcheds.isEmpty() ) {
-			getLogger().warn("output operation variable(s) {}: {}", reason, unmatcheds);
-		}
+	private static List<String> findUnmatched(Set<String> argIds, Set<String> counterparts) {
+		return FStream.from(argIds)
+						.filterNot(counterparts::contains)
+						.sort()
+						.toList();
 	}
 
 	private JsonNode loadInputArgument(MDTInstanceManager manager, String argStr) throws IOException {

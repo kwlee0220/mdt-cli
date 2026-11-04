@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -41,11 +40,10 @@ import picocli.CommandLine;
 /**
  * CLI 명령의 대상 선택, 종료 코드, 설정 전달에 대한 회귀 테스트.
  * <p>
- * {@link AbstractMDTCommand#s_connector}를 가짜 {@link MDTManager}를 돌려주는 함수로 바꿔, MDTManager 없이
- * {@code mdt} 진입점과 같은 설정의 {@link CommandLine}으로 명령을 실행한다.
+ * 하위 명령을 만들 때 가짜 {@link MDTManager}를 돌려주는 접속 함수를 넣어({@link AbstractMDTCommand#setConnector}),
+ * MDTManager 없이 {@code mdt} 진입점과 같은 설정의 {@link CommandLine}으로 명령을 실행한다.
  */
 public class CommandRegressionTest {
-	private Function<MDTClientConfig, MDTManager> m_originalConnector;
 	private Path m_confFile;
 
 	/** 가짜 매니저가 받은 호출 기록. */
@@ -60,17 +58,7 @@ public class CommandRegressionTest {
 
 	@BeforeEach
 	public void setUp(@TempDir Path tempDir) throws IOException {
-		m_originalConnector = AbstractMDTCommand.s_connector;
-		AbstractMDTCommand.s_connector = config -> {
-			m_connectedUrls.add(config.getMdtUrl());
-			return newManager();
-		};
 		m_confFile = writeConfig(tempDir, "conf.yaml", "http://localhost:1");
-	}
-
-	@AfterEach
-	public void tearDown() {
-		AbstractMDTCommand.s_connector = m_originalConnector;
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -150,6 +138,31 @@ public class CommandRegressionTest {
 	}
 
 	@Test
+	public void stopInstanceFailsWhenFinalStatusIsNotStopped() {
+		m_instances = Map.of("a", instance("a", MDTInstanceStatus.RUNNING, false, MDTInstanceStatus.FAILED));
+
+		Result result = run("stop", "instance", "--client-conf", m_confFile.toString(), "a");
+		assertEquals(1, result.exitCode());
+		assertTrue(result.err().contains("id=a") && result.err().contains("FAILED"), result.err());
+	}
+
+	@Test
+	public void stopInstanceNowaitAcceptsStopping() {
+		m_instances = Map.of("a", instance("a", MDTInstanceStatus.RUNNING, false, MDTInstanceStatus.STOPPING));
+
+		Result result = run("stop", "instance", "--client-conf", m_confFile.toString(), "--nowait", "a");
+		assertEquals(0, result.exitCode(), result.err());
+	}
+
+	@Test
+	public void stopInstanceWaitRejectsStopping() {
+		m_instances = Map.of("a", instance("a", MDTInstanceStatus.RUNNING, false, MDTInstanceStatus.STOPPING));
+
+		Result result = run("stop", "instance", "--client-conf", m_confFile.toString(), "a");
+		assertEquals(1, result.exitCode());
+	}
+
+	@Test
 	public void listWorkflowsFailsOnIOError() {
 		m_failWorkflowList = true;
 
@@ -201,7 +214,21 @@ public class CommandRegressionTest {
 	private Result run(String... args) {
 		StringWriter out = new StringWriter();
 		StringWriter err = new StringWriter();
-		CommandLine cl = MDTCommandsMain.newCommandLine(new MDTCommandsMain());
+		Function<MDTClientConfig, MDTManager> connector = config -> {
+			m_connectedUrls.add(config.getMdtUrl());
+			return newManager();
+		};
+		CommandLine.IFactory factory = new CommandLine.IFactory() {
+			@Override
+			public <K> K create(Class<K> cls) throws Exception {
+				K cmd = CommandLine.defaultFactory().create(cls);
+				if ( cmd instanceof AbstractMDTCommand mdtCmd ) {
+					mdtCmd.setConnector(connector);
+				}
+				return cmd;
+			}
+		};
+		CommandLine cl = MDTCommandsMain.newCommandLine(new MDTCommandsMain(), factory);
 		cl.setOut(new PrintWriter(out, true));
 		cl.setErr(new PrintWriter(err, true));
 		int exitCode = cl.execute(args);
@@ -266,6 +293,16 @@ public class CommandRegressionTest {
 	}
 
 	private MDTInstance instance(String id, MDTInstanceStatus status, boolean failToStop) {
+		return instance(id, status, failToStop, MDTInstanceStatus.STOPPED);
+	}
+
+	/**
+	 * 가짜 인스턴스를 만든다.
+	 *
+	 * @param stopResult	{@code stop()}이 돌려줄 상태({@code failToStop}이 {@code false}일 때).
+	 */
+	private MDTInstance instance(String id, MDTInstanceStatus status, boolean failToStop,
+									MDTInstanceStatus stopResult) {
 		return fake(MDTInstance.class, (method, args) -> switch ( method ) {
 			case "getId" -> id;
 			case "getStatus" -> status;
@@ -274,7 +311,7 @@ public class CommandRegressionTest {
 					throw new IllegalStateException("cannot stop " + id);
 				}
 				record("stop(" + id + ")");
-				yield MDTInstanceStatus.STOPPED;
+				yield stopResult;
 			}
 			default -> UNHANDLED;
 		});

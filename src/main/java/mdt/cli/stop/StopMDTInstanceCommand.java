@@ -115,7 +115,8 @@ public class StopMDTInstanceCommand extends AbstractMDTCommand {
 		// 조회·정지에 실패한 인스턴스가 있으면 원인을 출력하고 실패로 끝낸다.
 		for ( InstanceOperationResult result: stopper.getResults() ) {
 			if ( !result.succeeded() ) {
-				err().printf("Failed to stop MDTInstance: id=%s, cause=%s%n", result.instanceId(), result.cause());
+				err().printf("Failed to stop MDTInstance: id=%s, status=%s, cause=%s%n",
+								result.instanceId(), result.finalStatus(), result.cause());
 				markFailed();
 			}
 		}

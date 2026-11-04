@@ -21,7 +21,8 @@ import mdt.workflow.WorkflowModel;
  * 워크플로우 모델 정의를 담은 JSON 파일을 읽어 MDT 시스템에 등록하는 CLI 명령({@code wfmodel}).
  * <p>
  * 동일한 ID의 모델이 이미 등록되어 있는 경우 기본적으로 사용자에게 명확한 메시지와 함께 종료한다.
- * {@code --force}/{@code -f}를 지정하면 같은 id의 기존 모델을 서버에서 한 번에 교체한다(덮어쓰기).
+ * {@code --force}/{@code -f}를 지정하면 같은 id의 기존 모델을 서버에서 교체한다(덮어쓰기). 교체가 실패하면 서버가
+ * 기존 모델을 유지하거나 되돌린다.
  *
  * @author Kang-Woo Lee (ETRI)
  */
@@ -99,7 +100,7 @@ public class AddWorkflowModelCommand extends AbstractMDTCommand {
 		WorkflowManager wfMgr = mdt.getWorkflowManager();
 		getLogger().debug("adding workflow model: id={}, force={}", wfDesc.getId(), m_force);
 		if ( m_force ) {
-			// 서버가 한 번의 요청으로 교체하므로, 삭제 후 재등록처럼 중간에 실패해 기존 모델을 잃는 일이 없다.
+			// 서버가 같은 모델을 한 트랜잭션으로 갱신하고, 후처리(DAG 생성)가 실패하면 이전 모델로 되돌린다.
 			wfMgr.addOrReplaceWorkflowModel(wfDesc);
 			return;
 		}

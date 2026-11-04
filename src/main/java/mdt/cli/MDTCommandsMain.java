@@ -98,7 +98,20 @@ public class MDTCommandsMain {
 	 * @return	설정이 적용된 {@link CommandLine}.
 	 */
 	public static CommandLine newCommandLine(Object command) {
-		return new CommandLine(command)
+		return newCommandLine(command, CommandLine.defaultFactory());
+	}
+	
+	/**
+	 * {@link #newCommandLine(Object)}과 같되, 하위 명령 객체를 {@code factory}로 만든다.
+	 * <p>
+	 * 테스트가 하위 명령을 만들 때 가짜 MDTManager 접속 함수를 넣는 데 쓴다.
+	 *
+	 * @param command	picocli 명령 객체.
+	 * @param factory	하위 명령 객체를 만드는 팩토리.
+	 * @return	설정이 적용된 {@link CommandLine}.
+	 */
+	static CommandLine newCommandLine(Object command, CommandLine.IFactory factory) {
+		return new CommandLine(command, factory)
 					.setCaseInsensitiveEnumValuesAllowed(true)
 					.setAbbreviatedOptionsAllowed(true)
 					.setAbbreviatedSubcommandsAllowed(true)

@@ -23,9 +23,18 @@ public abstract class AbstractMDTCommand extends AbstractCommand {
 	
 	/**
 	 * 클라이언트 설정으로 MDTManager에 접속하는 함수. 기본은 {@link HttpMDTManager#connect(MDTClientConfig)}이며,
-	 * 같은 패키지의 테스트가 가짜 매니저를 돌려주는 함수로 바꿔 쓴다.
+	 * 테스트가 명령을 만들 때 가짜 매니저를 돌려주는 함수로 바꿔 넣는다({@link #setConnector(Function)}).
 	 */
-	static volatile Function<MDTClientConfig, MDTManager> s_connector = HttpMDTManager::connect;
+	private Function<MDTClientConfig, MDTManager> m_connector = HttpMDTManager::connect;
+	
+	/**
+	 * MDTManager 접속 함수를 바꾼다. 테스트용이다.
+	 *
+	 * @param connector	클라이언트 설정으로 MDTManager를 돌려주는 함수.
+	 */
+	void setConnector(Function<MDTClientConfig, MDTManager> connector) {
+		m_connector = connector;
+	}
 
 	/**
 	 * 서브클래스가 구현해야 하는 명령 본체.
@@ -53,7 +62,7 @@ public abstract class AbstractMDTCommand extends AbstractCommand {
 										"MDTManager endpoint is not configured: use --client-conf, "
 										+ "$MDT_CLIENT_HOME/" + MDTClientConfig.CONFIG_FILE_NAME + " or MDT_URL"));
 		getLogger().debug("connecting to MDTManager {}", config.getMdtUrl());
-		MDTManager mdt = s_connector.apply(config);
+		MDTManager mdt = m_connector.apply(config);
 
 		run(mdt);
 	}
