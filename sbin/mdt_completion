@@ -274,9 +274,9 @@ function _mdt_fetch_wf_models() {
 }
 
 function _mdt_fetch_wf_workflows() {
-  local status="$1"  # all, stopped, running, suspended
+  local status="$1"  # all, stopped, running
   [ -z "${MDT_WORKFLOW_URL}" ] && return 1
-  curl -sfS "${MDT_WORKFLOW_URL}/list/workflows/${status}" 2>/dev/null || true
+  curl -sfS "${MDT_WORKFLOW_URL}/list/workflows?status=${status}" 2>/dev/null || true
 }
 
 # Bash completion entry point function.
