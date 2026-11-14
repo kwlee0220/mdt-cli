@@ -76,7 +76,7 @@ change a public mdt-client API used here, the two repositories must be committed
 | Code | Meaning |
 |---|---|
 | 0 | Success. |
-| 1 | An exception escaped (`CommandExceptionHandler` prints `error: <message>`), or the command called `markFailed()`. |
+| 1 | An exception escaped (`CommandExceptionHandler` prints one line: `<ExceptionName>: id=<resource>[, status=<status>]` for `ResourceNotFoundException`, `ResourceAlreadyExistsException` and `InvalidResourceStatusException`, `error: <ExceptionName>: <message>` for other user errors), or the command called `markFailed()`. |
 | 2 | Usage error: `usageError(msg)` (a picocli `ParameterException`) or a picocli parse error. |
 
 [`CommandExceptionHandler`](src/main/java/mdt/cli/CommandExceptionHandler.java) prints a one-line message for user

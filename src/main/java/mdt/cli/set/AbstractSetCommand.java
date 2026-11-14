@@ -95,7 +95,7 @@ public abstract class AbstractSetCommand extends AbstractMDTCommand {
 	private void setWithJsonFile(ElementReference target, String jsonFilePath) throws IOException {
 		String jsonStr = jsonFilePath.equals("-")
 						? new String(System.in.readAllBytes(), StandardCharsets.UTF_8)
-						: IOUtils.toString(new File(jsonFilePath));
+						: IOUtils.readString(new File(jsonFilePath));
 		target.updateFromValueJson(jsonStr);
 	}
 	

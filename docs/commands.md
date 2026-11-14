@@ -1,10 +1,8 @@
 # mdt 명령어 사용 설명서
 
-Manufacturing DigitalTwin(MDT) 시스템을 제어하는 커맨드라인 도구 `mdt`의 사용 설명서이다. 각 명령의 형식, 인자,
-옵션, 동작, 출력, 오류 조건을 설명한다. 명령의 내장 도움말은 `mdt <명령> ... -h`로 볼 수 있으며, 이 문서의
-형식(Usage) 줄은 그 도움말과 같다.
+Manufacturing DigitalTwin(MDT) 시스템을 제어하는 커맨드라인 도구 `mdt`의 사용 설명서이다. 각 명령의 형식, 인자, 옵션, 동작, 출력, 오류 조건을 설명한다. 명령의 내장 도움말은 `mdt <명령> ... -h`로 볼 수 있으며, 이 문서의 형식(Usage) 줄은 그 도움말과 같다.
 
-목차
+## 목차
 
 1. [설치와 실행](#1-설치와-실행)
 2. [MDTManager 접속 설정](#2-mdtmanager-접속-설정)
@@ -28,11 +26,9 @@ $MDT_CLIENT_HOME/sbin/mdt <명령> [하위명령] [인자...] [옵션...]
 - 리눅스/맥: [`sbin/mdt`](../sbin/mdt) — `java -Dfile.encoding=UTF-8 -jar $MDT_CLIENT_HOME/mdt-cli-all.jar "$@"`
 - 윈도우: [`sbin/mdt.bat`](../sbin/mdt.bat)
 - Java 21 이상이 필요하다.
-- 빌드: `gradle shadowJar`의 산출물 `build/libs/mdt-cli-<버전>-all.jar`를 배포 디렉토리에 `mdt-cli-all.jar` 이름으로
-  복사한다. 버전은 빌드 시 환경 변수 `MDT_BUILD_VERSION`으로 정하며(미지정 시 `unknown`), `mdt -V`로 확인한다.
+- 빌드: `gradle shadowJar`의 산출물 `build/libs/mdt-cli-<버전>-all.jar`를 배포 디렉토리에 `mdt-cli-all.jar` 이름으로 복사한다. 버전은 빌드 시 환경 변수 `MDT_BUILD_VERSION`으로 정하며(미지정 시 `unknown`), `mdt -V`로 확인한다.
 - 명령 자동 완성(bash): [`sbin/mdt_completion`](../sbin/mdt_completion)을 `.bash_profile`에서 `source` 한다.
-  명령·옵션 이름과 함께, `MDT_URL`(필요하면 `MDT_WORKFLOW_URL`)이 설정되어 있으면 인스턴스 id, 파라미터,
-  오퍼레이션, 워크플로우 이름 같은 값도 완성한다.
+  명령·옵션 이름과 함께, `MDT_URL`(필요하면 `MDT_WORKFLOW_ENDPOINT`)이 설정되어 있으면 인스턴스 id, 파라미터, 오퍼레이션, 워크플로우 이름 같은 값도 완성한다.
 
 이 문서에서는 `sbin/mdt`를 `mdt`로 줄여 쓴다.
 
@@ -40,8 +36,7 @@ $MDT_CLIENT_HOME/sbin/mdt <명령> [하위명령] [인자...] [옵션...]
 
 ## 2. MDTManager 접속 설정
 
-`endpoints`와 `build`를 제외한 모든 명령은 실행 중인 MDTManager에 HTTP로 접속한다. 접속 설정은 다음 순서로
-찾으며, 먼저 찾은 것 하나만 쓴다.
+`endpoints`와 `build`를 제외한 모든 명령은 실행 중인 MDTManager에 HTTP로 접속한다. 접속 설정은 다음 순서로 찾으며, 먼저 찾은 것 하나만 쓴다.
 
 1. `--client-conf <path>` 옵션으로 지정한 설정 파일.
    하위 명령에 지정하지 않았으면 가장 가까운 상위 명령에 지정한 값을 쓴다
@@ -49,8 +44,7 @@ $MDT_CLIENT_HOME/sbin/mdt <명령> [하위명령] [인자...] [옵션...]
 2. `$MDT_CLIENT_HOME/mdt_client_config.yaml` (`MDT_CLIENT_HOME`이 없으면 현재 디렉토리의 같은 파일).
 3. 환경 변수 `MDT_URL` (MDTManager URL). 이때 읽기 타임아웃은 30초다.
 
-어디에도 없으면 `error: MDTManager endpoint is not configured: ...`를 출력하고 종료 코드 1로 끝난다. 2번 파일이
-있는데 형식이 잘못되었으면 3번으로 넘어가지 않고 오류로 끝난다.
+어디에도 없으면 `error: IllegalArgumentException: MDTManager endpoint is not configured: ...`를 출력하고 종료 코드 1로 끝난다. 2번 파일이 있는데 형식이 잘못되었으면 3번으로 넘어가지 않고 오류로 끝난다.
 
 설정 파일 예:
 
@@ -58,7 +52,7 @@ $MDT_CLIENT_HOME/sbin/mdt <명령> [하위명령] [인자...] [옵션...]
 mdtUrl: "${env:MDT_URL:-http://localhost:12985}"
 connectTimeout: "10s"
 readTimeout: "30s"
-workflowManagerUrl: "${env:MDT_WORKFLOW_URL:-http://localhost:12989}"
+workflowManagerUrl: "${env:MDT_WORKFLOW_ENDPOINT:-http://localhost:12989}"
 # mqttEndpoint: "tcp://localhost:1883"
 ```
 
@@ -71,8 +65,7 @@ workflowManagerUrl: "${env:MDT_WORKFLOW_URL:-http://localhost:12989}"
 | `mqttEndpoint` | | MQTT endpoint |
 
 - 값에 `${env:VAR}`, `${env:VAR:-기본값}`, `${sys:prop}` 형식으로 환경 변수·시스템 속성을 넣을 수 있다.
-- 위 다섯 키 외의 키가 있으면 설정 파일을 읽지 못하고 오류가 난다. 예전 키 `endpoint`, `workflowEndpoint`는
-  각각 `mdtUrl`, `workflowManagerUrl`로 바꾼다.
+- 위 다섯 키 외의 키가 있으면 설정 파일을 읽지 못하고 오류가 난다. 예전 키 `endpoint`, `workflowEndpoint`는 각각 `mdtUrl`, `workflowManagerUrl`로 바꾼다.
 - 현재 적용되는 설정은 [`mdt endpoints`](#mdt-endpoints)로 확인한다.
 
 ---
@@ -88,8 +81,7 @@ workflowManagerUrl: "${env:MDT_WORKFLOW_URL:-http://localhost:12989}"
 | `-h`, `--help` | | 사용법 출력 |
 | `-V`, `--version` | | 버전 출력 |
 
-명령별 옵션 표에서는 위 공통 옵션을 생략한다. 그룹 명령(`list`, `get` 등)을 하위 명령 없이 실행하면 사용법을
-출력한다.
+명령별 옵션 표에서는 위 공통 옵션을 생략한다. 그룹 명령(`list`, `get` 등)을 하위 명령 없이 실행하면 사용법을 출력한다.
 
 ### 3.2 입력 편의 기능
 
@@ -121,8 +113,13 @@ workflowManagerUrl: "${env:MDT_WORKFLOW_URL:-http://localhost:12989}"
 | `1` | 실행 실패. 서버 오류·접속 실패 같은 예외가 났거나, 여러 대상 중 일부라도 실패한 경우(예: `stop instance a b`에서 `b` 정지 실패) |
 | `2` | 사용법 오류. 필수 인자 누락, 함께 쓸 수 없는 옵션 조합, 잘못된 옵션 값 등. 메시지와 사용법을 출력한다 |
 
-- 실패 메시지는 `error: <원인>` 한 줄로 출력한다. 원인을 자세히 보려면 `--loglevel debug`를 붙이면 스택
-  트레이스까지 출력한다. 사용자 입력 오류가 아닌 예외(내부 오류)는 항상 스택 트레이스를 출력한다.
+- 실패 메시지는 한 줄로 출력한다.
+  - 자원 오류는 예외 이름과 대상 자원을 출력한다.
+    - `ResourceNotFoundException: id=MDTInstance(id=CNC-04)`: 해당 자원이 없다.
+    - `ResourceAlreadyExistsException: id=MDTInstance(id=CNC-04)`: 같은 식별자의 자원이 이미 있다.
+    - `InvalidResourceStatusException: id=MDTInstance(id=CNC-04), status=STOPPED`: 자원이 요청을 처리할 수 없는 상태다.
+  - 그 밖의 오류는 `error: <예외 이름>: <메시지>`로 출력한다.
+- 원인을 자세히 보려면 `--loglevel debug`를 붙이면 스택 트레이스까지 출력한다. 사용자 입력 오류가 아닌 예외(내부 오류)는 항상 스택 트레이스를 출력한다.
 
 ### 3.5 출력 형식
 
@@ -140,14 +137,12 @@ workflowManagerUrl: "${env:MDT_WORKFLOW_URL:-http://localhost:12989}"
 주기적으로 다시 출력한다.
 
 - `q`, `Q` 또는 `ESC` 키를 누르면 끝난다(종료 코드 0).
-- 반복 중 조회가 실패하면 그 회차 화면에 `failed to ...: cause=...`를 표시하고 계속 반복한다. 반복하지 않는
-  실행에서 조회가 실패하면 종료 코드 1로 끝난다.
+- 반복 중 조회가 실패하면 그 회차 화면에 `failed to ...: cause=...`를 표시하고 계속 반복한다. 반복하지 않는 실행에서 조회가 실패하면 종료 코드 1로 끝난다.
 - `-v`를 함께 주면 소요 시간도 표시한다.
 
 ### 3.7 로그
 
-로그는 표준 에러로 출력한다. 로그 설정은 `$MDT_CLIENT_HOME/logback.xml`(없으면 현재 디렉토리의 `logback.xml`)을
-먼저 쓰고, 없으면 내장 기본값(INFO 이상)을 쓴다. 명령 한 번만 자세히 보려면 `--loglevel debug`를 쓴다.
+로그는 표준 에러로 출력한다. 로그 설정은 `$MDT_CLIENT_HOME/logback.xml`(없으면 현재 디렉토리의 `logback.xml`)을 먼저 쓰고, 없으면 내장 기본값(INFO 이상)을 쓴다. 명령 한 번만 자세히 보려면 `--loglevel debug`를 쓴다.
 
 ---
 
@@ -266,8 +261,7 @@ MDTInstance zip file created: /home/user/line-01.zip
 
 ### `mdt list` — 목록 조회
 
-목록 명령의 CSV 출력은 표(`table`)와 같은 열을 같은 순서로 출력하며 헤더 행은 없다. 첫 열 `#`은 1부터 시작하는
-순번이다. 기본 구분자는 `|`이며 `-d`로 바꾼다.
+목록 명령의 CSV 출력은 표(`table`)와 같은 열을 같은 순서로 출력하며 헤더 행은 없다. 첫 열 `#`은 1부터 시작하는 순번이다. 기본 구분자는 `|`이며 `-d`로 바꾼다.
 
 **인스턴스 필터식(`-f`)** — `list instances/shells/submodels/operations`가 받는다. MDTManager가 JPQL `WHERE` 절로
 사용하므로 속성은 `instance.<속성>` 형식으로 쓰고 문자열은 작은따옴표로 감싼다(`=`, `!=`, `like`, `and`, `or` 등).
@@ -1192,8 +1186,10 @@ Submodel 지정:
 
 | 증상 | 원인과 해결 |
 |------|-------------|
-| `error: MDTManager endpoint is not configured` | 접속 설정이 없다. §2의 설정 파일을 두거나 `MDT_URL`을 설정한다 |
-| `error: Failed to connect to the server: endpoint=...` | MDTManager가 꺼져 있거나 URL이 틀렸다. `mdt endpoints`로 확인한다 |
+| `error: IllegalArgumentException: MDTManager endpoint is not configured` | 접속 설정이 없다. §2의 설정 파일을 두거나 `MDT_URL`을 설정한다 |
+| `error: RESTfulIOException: Failed to connect to the server: endpoint=...` | MDTManager가 꺼져 있거나 URL이 틀렸다. `mdt endpoints`로 확인한다 |
+| `ResourceNotFoundException: id=MDTInstance(id=...)` | 해당 MDTInstance가 등록되어 있지 않다. `mdt list instances`로 확인한다 |
+| `InvalidResourceStatusException: id=MDTInstance(id=...), status=...` | MDTInstance가 실행 중이 아니다. `mdt start instance <id>`로 시작한다 |
 | `Missing required parameter: ...` (종료 코드 2) | 필수 위치 인자가 빠졌다. `-h`로 형식을 확인한다 |
 | `Specify either MDTInstance ids or --all, not both.` | id 목록과 `--all`을 함께 줬다 |
 | `run` 명령에서 위치 인자 오류 | 동적 인자를 위치 인자 앞에 썼다. 뒤로 옮기거나 `--in.x=값` 형식을 쓴다 |
