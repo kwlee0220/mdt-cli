@@ -28,7 +28,7 @@ $MDT_CLIENT_HOME/sbin/mdt <명령> [하위명령] [인자...] [옵션...]
 - Java 21 이상이 필요하다.
 - 빌드: `gradle shadowJar`의 산출물 `build/libs/mdt-cli-<버전>-all.jar`를 배포 디렉토리에 `mdt-cli-all.jar` 이름으로 복사한다. 버전은 빌드 시 환경 변수 `MDT_BUILD_VERSION`으로 정하며(미지정 시 `unknown`), `mdt -V`로 확인한다.
 - 명령 자동 완성(bash): [`sbin/mdt_completion`](../sbin/mdt_completion)을 `.bash_profile`에서 `source` 한다.
-  명령·옵션 이름과 함께, `MDT_URL`(필요하면 `MDT_WORKFLOW_ENDPOINT`)이 설정되어 있으면 인스턴스 id, 파라미터, 오퍼레이션, 워크플로우 이름 같은 값도 완성한다.
+  명령·옵션 이름과 함께, `MDT_URL`(필요하면 `MDT_WORKFLOW_ENDPOINT`)이 설정되어 있으면 인스턴스 id, 파라미터, 오퍼레이션, 워크플로우 이름 같은 값도 완성한다. `get element`·`set element`의 참조식은 MDTManager의 `GET /list/expr`로 단계별(`param:` → `param:<인스턴스>:` → 파라미터 id, `<인스턴스>:<서브모델>:` → element 경로 등)로 완성하며, 후보는 `param:test:`처럼 참조식 전체로 표시된다. element 경로 후보는 실행 중인 인스턴스에서만 나오고, `*` 같은 와일드카드는 후보로 나오지 않는다(직접 입력은 된다). 참조식을 한 단어로 다루기 위해 이 스크립트는 셸의 `COMP_WORDBREAKS`에서 `:`를 뺀다.
 
 이 문서에서는 `sbin/mdt`를 `mdt`로 줄여 쓴다.
 
@@ -162,7 +162,7 @@ mdt
 ├── get                                       상세 조회
 │   ├── instance <instance-id>                MDTInstance (하위: submodels, parameters, operations, compositions, log)
 │   ├── mdt-info <instance-id>                MDT 정보 모델
-│   ├── element (--ref <element-ref> | <instance-id> <submodel-idShort> <idShortPath>)
+│   ├── element <element-ref>
 │   ├── parameter <instance-id> [parameter-id]
 │   ├── argument <instance-id> <operation-id> <argument-id>
 │   ├── shell <aas-id|instance-id>
@@ -175,7 +175,7 @@ mdt
 │   ├── instance <instance-id> <path>         MDTInstance 등록
 │   └── wfmodel <path>                        워크플로우 모델 등록
 ├── set
-│   ├── element <instance-id> <submodel-idShort> <idShortPath>
+│   ├── element <element-ref>
 │   ├── parameter <instance-id> [parameter-id]
 │   ├── argument <instance-id> <operation-id> <argument-id>
 │   └── file <element-ref> <path>             File 요소에 파일 올리기
@@ -438,26 +438,25 @@ mdt get mdt-info line-01 -c -r 3s
 
 ```
 mdt get element [-hvV] [--client-conf=path] [--loglevel=logger-level] [-o=type] [-r=interval]
-                (--ref=ref_expr | [instance-id submodel-idShort idShortPath])
+                element-expr
 ```
 
-SubmodelElement 하나를 출력한다. 대상은 `--ref` 참조식 또는 위치 인자 세 개 중 **하나**로 지정한다. 위치 인자는
-`<instance-id>:<submodel-idShort>:<idShortPath>` 참조식으로 합쳐 해석하므로 `*` 같은 와일드카드는 쓸 수 없다.
-`--ref`에는 `param:`, `oparg:`, `timeseries:` 등 모든 참조식(§6.1)을 쓸 수 있다.
+참조식(§6.1) 하나가 가리키는 SubmodelElement를 출력한다. `<instance-id>:<submodel-idShort>:<idShortPath>`,
+`param:`, `oparg:`, `opvar:`, `timeseries:`, `submodel:id=` 등 모든 참조식을 쓸 수 있다. `*`, `#`, `|`가 들어간
+참조식은 셸이 해석하지 않도록 따옴표로 감싼다.
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
-| `--ref` | `<ref_expr>` | | 대상 참조식 |
 | `-o`, `--output` | `<type>` | `tree` | `tree`, `json`(SubmodelElement JSON), `value`(값만) |
 | `-r`, `--repeat` | `<interval>` | | 반복 출력 |
 | `-v` | | | 소요 시간 출력 |
 
 ```bash
-mdt get element line-01 Data DataInfo.temperature
-mdt get element line-01 Data DataInfo -o json
-mdt get element --ref param:line-01:Temperature -o value
-mdt get element --ref 'param:line-01:*' -o json          # 파라미터 전체
-mdt get element --ref 'timeseries:line-01:Log#last=5'    # 시계열 최근 5건
+mdt get element line-01:Data:DataInfo.temperature
+mdt get element line-01:Data:DataInfo -o json
+mdt get element param:line-01:Temperature -o value
+mdt get element 'param:line-01:*' -o json          # 파라미터 전체
+mdt get element 'timeseries:line-01:Log#last=5'    # 시계열 최근 5건
 ```
 
 #### `mdt get parameter`
@@ -467,7 +466,7 @@ mdt get parameter [-hvV] [--client-conf=path] [--loglevel=logger-level] [-o=type
                   instance-id [parameter-id]
 ```
 
-MDT 파라미터를 출력한다. `--ref param:<instance-id>:<parameter-id>`와 같다.
+MDT 파라미터를 출력한다. `mdt get element param:<instance-id>:<parameter-id>`와 같다.
 
 | 위치 인자 | 기본값 | 설명 |
 |-----------|--------|------|
@@ -722,16 +721,18 @@ mdt add wfmodel ./workflows/line-flow.json -f
 
 ```
 mdt set element [-hV] [--client-conf=path] [--loglevel=logger-level] (값 소스)
-                instance-id submodel-idShort idShortPath
+                element-expr
 ```
 
-SubmodelElement 값을 쓴다. 세 위치 인자 모두 필수다.
+참조식(§6.1) 하나가 가리키는 SubmodelElement에 값을 쓴다. `<instance-id>:<submodel-idShort>:<idShortPath>`,
+`param:`, `oparg:` 등을 쓸 수 있다. `timeseries:`처럼 값을 쓸 수 없는 참조는 실행할 때 오류가 난다.
 
 ```bash
-mdt set element line-01 Data DataInfo.temperature --json '25.3'
-mdt set element line-01 Data DataInfo.status --json '"RUNNING"'
-mdt set element line-01 Data DataInfo --json-file ./data-info.json
-cat value.json | mdt set element line-01 Data DataInfo --json-file -
+mdt set element line-01:Data:DataInfo.temperature --json '25.3'
+mdt set element line-01:Data:DataInfo.status --json '"RUNNING"'
+mdt set element param:line-01:Temperature --json '25.3'
+mdt set element line-01:Data:DataInfo --json-file ./data-info.json
+cat value.json | mdt set element line-01:Data:DataInfo --json-file -
 ```
 
 #### `mdt set parameter`
@@ -1132,7 +1133,7 @@ mdt simulation run https://example.com/sm/Simulation -e --poll 5s
 
 ### 6.1 참조식 (`element-ref`)
 
-`--ref`, `get/set/remove file`의 `element-ref`, `run`의 `--in`/`--out`/`--inout` 값(참조일 때),
+`get/set element`의 `element-expr`, `get/set/remove file`의 `element-ref`, `run`의 `--in`/`--out`/`--inout` 값(참조일 때),
 `resolve reference`가 이 문법을 쓴다. 문법 정의는
 [`MdtExpr.g4`](../../mdt-client/src/main/antlr/MdtExpr.g4)에 있다.
 

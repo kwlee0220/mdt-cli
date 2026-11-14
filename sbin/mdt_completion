@@ -51,6 +51,13 @@
 if [ -n "$BASH_VERSION" ]; then
   # Enable programmable completion facilities when using bash (see [3])
   shopt -s progcomp
+
+  # MDT expressions contain ':' (e.g. param:test:Data). With ':' in COMP_WORDBREAKS bash treats
+  # 'param:' and 'test:' as separate words and can only show the part after the last ':' as a
+  # candidate. Removing it makes the whole expression one word, so candidates are listed as full
+  # expressions (param:test:, param:CNC-04:). This applies to the whole shell session: other
+  # commands that complete words containing ':' then see the whole word as well.
+  COMP_WORDBREAKS=${COMP_WORDBREAKS//:/}
 elif [ -n "$ZSH_VERSION" ]; then
   # Make alias a distinct command for completion purposes when using zsh (see [4])
   setopt COMPLETE_ALIASES
@@ -265,6 +272,36 @@ function _mdt_fetch_elements() {
   local enc_sm=$(_mdt_urlencode "$submodel")
   local enc_path=$(_mdt_urlencode "$path")
   curl -sfS "${MDT_URL}/list/elements?instance=${enc_inst}&submodel=${enc_sm}&path=${enc_path}" 2>/dev/null || true
+}
+
+# Complete an MDT expression (e.g. param:inst:Data, inst:Data:DataInfo.Temperature) with
+# GET /list/expr, which returns whole expressions starting with the typed prefix.
+# bash splits words at ':' (COMP_WORDBREAKS), so the word is rebuilt from COMP_LINE and the
+# part bash already treats as typed (up to the last ':') is stripped from each candidate.
+function _mdt_complete_expr() {
+  COMPREPLY=()
+  [ -z "${MDT_URL}" ] && return 0
+  local line="${COMP_LINE:0:COMP_POINT}"
+  local word="${line##*[[:space:]]}"
+  local enc
+  enc=$(_mdt_urlencode "$word")
+  local cands
+  cands=$(curl -sfS "${MDT_URL}/list/expr?prefix=${enc}" 2>/dev/null) || return 0
+  [ -z "$cands" ] && return 0
+
+  local strip=""
+  if [[ "${COMP_WORDBREAKS}" == *:* && "$word" == *:* ]]; then
+    strip="${word%"${word##*:}"}"
+  fi
+  local c nospace=0
+  local IFS=$'\n'
+  for c in $cands; do
+    COMPREPLY+=( "${c#"$strip"}" )
+    # A candidate ending with ':', '.' or '[' continues; do not append a space after it.
+    case "$c" in *: | *. | *\[) nospace=1 ;; esac
+  done
+  (( nospace )) && type compopt &>/dev/null && compopt -o nospace
+  return 0
 }
 
 # Workflow API (MDT_WORKFLOW_ENDPOINT)
@@ -1483,7 +1520,7 @@ function _picocli_mdt_picocli_get_element() {
 
   local commands=""
   local flag_opts="-v -h --help -V --version"
-  local arg_opts="--client_conf --loglevel --output -o --repeat -r --ref"
+  local arg_opts="--client_conf --loglevel --output -o --repeat -r"
 
   type compopt &>/dev/null && compopt +o default
 
@@ -1503,29 +1540,12 @@ function _picocli_mdt_picocli_get_element() {
     --repeat|-r)
       return
       ;;
-    --ref)
-      return
-      ;;
   esac
 
   if [[ "${curr_word}" == -* ]]; then
     COMPREPLY=( $(compgen -W "${flag_opts} ${arg_opts}" -- "${curr_word}") )
   else
-    local positionals=""
-    local currIdx inst sm
-    currIdx=$(currentPositionalIndex "element" "${arg_opts}" "${flag_opts}")
-    if (( currIdx == 0 )); then
-      positionals=$(_mdt_fetch_ids "running" 2>/dev/null)
-    elif (( currIdx == 1 )); then
-      inst=$(_mdt_get_positional_at "element" "${arg_opts}" "${flag_opts}" 0)
-      positionals=$(_mdt_fetch_submodels "$inst" 2>/dev/null)
-    elif (( currIdx >= 2 )); then
-      inst=$(_mdt_get_positional_at "element" "${arg_opts}" "${flag_opts}" 0)
-      sm=$(_mdt_get_positional_at "element" "${arg_opts}" "${flag_opts}" 1)
-      positionals=$(_mdt_fetch_elements "$inst" "$sm" "${curr_word}" 2>/dev/null)
-    fi
-    local IFS=$'\n'
-    COMPREPLY=( $(compgen -W "${commands// /$'\n'}${IFS}${positionals}" -- "${curr_word}") )
+    _mdt_complete_expr
   fi
 }
 
@@ -2277,21 +2297,7 @@ function _picocli_mdt_picocli_set_element() {
   if [[ "${curr_word}" == -* ]]; then
     COMPREPLY=( $(compgen -W "${flag_opts} ${arg_opts}" -- "${curr_word}") )
   else
-    local positionals=""
-    local currIdx inst sm
-    currIdx=$(currentPositionalIndex "element" "${arg_opts}" "${flag_opts}")
-    if (( currIdx == 0 )); then
-      positionals=$(_mdt_fetch_ids "running" 2>/dev/null)
-    elif (( currIdx == 1 )); then
-      inst=$(_mdt_get_positional_at "element" "${arg_opts}" "${flag_opts}" 0)
-      positionals=$(_mdt_fetch_submodels "$inst" 2>/dev/null)
-    elif (( currIdx >= 2 )); then
-      inst=$(_mdt_get_positional_at "element" "${arg_opts}" "${flag_opts}" 0)
-      sm=$(_mdt_get_positional_at "element" "${arg_opts}" "${flag_opts}" 1)
-      positionals=$(_mdt_fetch_elements "$inst" "$sm" "${curr_word}" 2>/dev/null)
-    fi
-    local IFS=$'\n'
-    COMPREPLY=( $(compgen -W "${commands// /$'\n'}${IFS}${positionals}" -- "${curr_word}") )
+    _mdt_complete_expr
   fi
 }
 

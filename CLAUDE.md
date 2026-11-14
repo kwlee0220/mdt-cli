@@ -149,6 +149,16 @@ do not register them without being asked).
 - Argument checks use `utils.Preconditions` (not Guava).
 - Javadoc/comment lines ≤ 110 columns (tab = 4).
 
+## Bash completion
+
+[sbin/mdt_completion](sbin/mdt_completion) is the completion script; it is the file to edit for completion changes
+(the deployed `$MDT_CLIENT_HOME/sbin/mdt_completion` is a symlink to it). It is picocli-generated completion with
+MDT API lookups merged in (`_mdt_fetch_*` → mdt-manager `GET /list/...`, `MDT_URL`; workflows via
+`MDT_WORKFLOW_ENDPOINT`). Reference-expression arguments (`get element`, `set element`) use `_mdt_complete_expr`,
+which sends the whole word to `GET /list/expr?prefix=` and shows the returned full expressions. The script removes
+`:` from `COMP_WORDBREAKS` (session-wide) so that an expression is one word; `_mdt_complete_expr` still strips the
+typed part if `:` is a word break. A candidate ending in `:`, `.` or `[` gets `compopt -o nospace`.
+
 ## Packaging
 
 `shadowJar`/`jar` exclude dependencies' `logback-test.xml` and `logback-spring.xml` and include only this
@@ -185,13 +195,13 @@ Covers how to map a task to a command, argument syntax, and common mistakes. For
 | Instance operations | `mdt get instance <instance-id> operations -o json` |
 | Instance submodels | `mdt get instance <instance-id> submodels -o json` |
 | Read a parameter **value** | `mdt get parameter <instance-id> <parameter-id> -o value` |
-| Read any SubmodelElement value | `mdt get element --ref <element-ref> -o value` |
+| Read any SubmodelElement value | `mdt get element <element-ref> -o value` (e.g. `param:<instance-id>:<parameter-id>`) |
 | Read an operation argument | `mdt get argument <instance-id> <operation-id> <argument-id> -o value` |
 | Time series (recent) | `mdt get timeseries <instance-id> <submodel-idShort> --last <n\|dur> -o csv --header` |
 | Time series (from a time) | `mdt get timeseries <instance-id> <submodel-idShort> --start <datetime> --count <n> -o csv --header` |
 | Download a File element | `mdt get file <element-ref> -f <path>` |
 | Write a parameter value | `mdt set parameter <instance-id> <parameter-id> --json '<json>'` |
-| Write a SubmodelElement value | `mdt set element <instance-id> <submodel-idShort> <idShortPath> --json '<json>'` |
+| Write a SubmodelElement value | `mdt set element <element-ref> --json '<json>'` (e.g. `<instance-id>:<submodel-idShort>:<idShortPath>`) |
 | Write an operation argument | `mdt set argument <instance-id> <operation-id> <argument-id> --json '<json>'` |
 | Upload a file to a File element | `mdt set file <element-ref> <path> --mime-type <type>` |
 | Run an AAS Operation | `mdt run operation <instance-id> <submodel-idShort> <idShortPath> --in.<n> <expr> --out.<n> <ref> --show-result` |
@@ -295,7 +305,7 @@ Exactly one of:
 
 ```bash
 mdt set parameter line01 Temperature --json '25.3'
-mdt set element line01 Data DataInfo.status --json '"RUNNING"'
+mdt set element line01:Data:DataInfo.status --json '"RUNNING"'
 mdt set file param:line01:manual ./manual.pdf --mime-type application/pdf
 ```
 
