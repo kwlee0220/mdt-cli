@@ -672,7 +672,7 @@ MDTInstance를 MDTManager에 등록한다. 등록만 하며 기동하지 않는�
 
 | 옵션 | 인자 | 기본값 | 설명 |
 |------|------|--------|------|
-| `-p`, `--port` | `<number>` | `-1` | 인스턴스 포트. `-1`이면 자동 할당 |
+| `-p`, `--port` | `<number>` | `-1` | 인스턴스 포트. `-1`이면 `config.json`의 `port`를 쓴다(없으면 인스턴스를 시작할 수 없다) |
 | `-v` | | | 성공하면 `Added MDTInstance: id=...`를 출력한다 |
 
 같은 id가 이미 있으면 `MDTInstance already exists: id=...`를, 그 밖의 실패는 `Failed to add MDTInstance: ...`를

@@ -50,10 +50,10 @@ public class AddMDTInstanceCommand extends AbstractMDTCommand {
 
 	/**
 	 * MDTInstance가 사용할 포트 번호.
-	 * {@code -1}이면 서버가 자동으로 포트를 할당하거나 기본값을 사용한다.
+	 * {@code -1}이면 포트를 지정하지 않으며, 이때는 {@code config.json}의 {@code port}를 쓴다.
 	 */
 	@Option(names={"--port", "-p"}, paramLabel="number",
-			description="Port number for the MDTInstance (-1 for auto-assign, default: ${DEFAULT-VALUE})",
+			description="MDTInstance port (-1: use 'port' in config.json, default: ${DEFAULT-VALUE})",
 			defaultValue = "-1")
 	private int m_port = -1;
 
