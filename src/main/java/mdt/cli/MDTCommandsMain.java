@@ -9,7 +9,6 @@ import utils.Utilities;
 import utils.io.FileUtils;
 
 import mdt.cli.MDTCommandsMain.ResumeCommands;
-import mdt.cli.MDTCommandsMain.SimulationCommands;
 import mdt.cli.MDTCommandsMain.SuspendCommands;
 import mdt.cli.add.AddCommands;
 import mdt.cli.get.GetCommands;
@@ -52,7 +51,6 @@ import picocli.CommandLine.Command;
 		SetCommands.class,
 		RunCommands.class,
 		ResolveCommands.class,
-		SimulationCommands.class,
 	})
 public class MDTCommandsMain {
 	private static final String LOGBACK_CONFIG_FILE = "logback.xml";
@@ -121,17 +119,6 @@ public class MDTCommandsMain {
 					.setColorScheme(CommandLine.Help.defaultColorScheme(CommandLine.Help.Ansi.OFF))
 					.setExecutionExceptionHandler(new CommandExceptionHandler());
 	}
-	
-	@Command(
-		name="simulation",
-		parameterListHeading = "Parameters:%n",
-		optionListHeading = "Options:%n",
-		mixinStandardHelpOptions = true,
-		description="Simulation related commands",
-		subcommands= {
-			StartSkkuSimulationCommand.class,
-		})
-	public static class SimulationCommands extends CommandCollection {}
 	
 	@Command(
 		name="suspend",

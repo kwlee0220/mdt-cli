@@ -6,7 +6,7 @@ Manufacturing DigitalTwin(MDT) 시스템을 제어하기 위한 커맨드라인 
 
 `picocli` 기반의 단일 진입점([`mdt`](src/main/java/mdt/cli/MDTCommandsMain.java)) 명령으로,
 여러 하위 명령 그룹(`list`, `get`, `add`, `set`, `remove`, `start`, `stop`, `suspend`, `resume`, `run`,
-`resolve`, `simulation` 등)을 제공한다.
+`resolve` 등)을 제공한다.
 
 ## 요구 사항
 
@@ -76,4 +76,3 @@ gradle test
 | `suspend` / `resume` | 워크플로우 일시 정지/재개 |
 | `run` | AAS 오퍼레이션, 서브모델 실행 |
 | `resolve` | Reference를 URL로 해석 |
-| `simulation` | SKKU 시뮬레이션 등 시뮬레이션 제어 |

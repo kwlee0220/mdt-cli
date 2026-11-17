@@ -15,7 +15,7 @@ The full human-oriented command reference is [docs/commands.md](docs/commands.md
 
 `mdt-cli` is the command-line client of the Manufacturing DigitalTwin (MDT) system. A single picocli root command
 `mdt` (`mdt.cli.MDTCommandsMain`) exposes command groups that talk to a running MDTManager over HTTP to control
-instances, submodels, AAS elements, workflows, and simulations.
+instances, submodels, AAS elements, and workflows.
 
 **Language rule:** source comments, Javadoc, and `docs/commands.md` are written in Korean. Keep that when editing
 code. This file is in English for agents.
@@ -131,9 +131,6 @@ is in `:utils` `utils.rpc.restful`.
   ([`SetTaskCommand`](src/main/java/mdt/cli/run/SetTaskCommand.java)) extend `DynamicArgumentsCommand` directly.
   `restful` exits 1 if a requested output is missing from the RPC response.
 
-`StopSimulationCommand` and `mdt.task.skku.SKKUSimulationTaskCommand` are not registered in any group (intentional;
-do not register them without being asked).
-
 ## Coding rules
 
 - **Validate in `validate()`**, not by overriding `run()`. Report bad input with `throw usageError("...")` (exit 2).
@@ -211,7 +208,6 @@ Covers how to map a task to a command, argument syntax, and common mistakes. For
 | Start / stop a workflow | `mdt start workflow <model-id>` / `mdt stop workflow <workflow-name>` |
 | Suspend / resume a workflow | `mdt suspend workflow <workflow-name>` / `mdt resume workflow <workflow-name>` |
 | Resolve a reference to a URL | `mdt resolve reference <element-ref>` |
-| Run a simulation | `mdt simulation run <instance-id\|submodel-id> -t <timeout>` |
 
 For a single machine-readable value, `get ... -o value` is the easiest to parse (raw value, no decoration).
 
@@ -333,7 +329,7 @@ CSV fields containing the delimiter, `"`, or a newline are quoted per RFC 4180.
 - Bulk targets: give **exactly one** of id list, `--all`, or filters (`--glob/-g`, `--model-filter`); mixing them is
   a usage error. In `remove workflow`, `--glob` and `--model-filter` together select the intersection.
   `remove instance --all` is destructive; `remove instance -f` stops running instances first.
-- `start/stop/run/simulation` wait until the target state is reached. Use `--nowait` to return immediately and
+- `start/stop/run` wait until the target state is reached. Use `--nowait` to return immediately and
   `--timeout` to bound the wait. If any target fails, the exit code is 1.
 - Do not confuse a submodel idShort under an instance (`line01:Data`) with a global submodel id
   (`submodel:id=<...>`).

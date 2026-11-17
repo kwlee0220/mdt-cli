@@ -9,10 +9,9 @@ Manufacturing DigitalTwin(MDT) 시스템을 제어하는 커맨드라인 도구 
 3. [공통 규칙](#3-공통-규칙) — 공통 옵션, 값 표기, 출력과 종료 코드, 반복 출력
 4. [명령 전체 구조](#4-명령-전체-구조)
 5. [명령별 설명](#5-명령별-설명) — `endpoints`, `build`, `list`, `get`, `add`, `set`, `remove`, `start`, `stop`,
-   `suspend`/`resume`, `run`, `resolve`, `simulation`
+   `suspend`/`resume`, `run`, `resolve`
 6. [참조식과 값 리터럴 문법](#6-참조식과-값-리터럴-문법)
 7. [자주 겪는 오류](#7-자주-겪는-오류)
-8. [부록: 등록되지 않은 명령](#8-부록-등록되지-않은-명령)
 
 ---
 
@@ -197,8 +196,7 @@ mdt
 │   ├── submodel <instance-id> <submodel-idShort>
 │   ├── restful                               RESTful 비동기 RPC
 │   └── set                                   값 복사(set task)
-├── resolve reference <element-ref>           참조식을 URL로 변환
-└── simulation run <instance-id|submodel-id>  시뮬레이션 실행
+└── resolve reference <element-ref>           참조식을 URL로 변환
 ```
 
 위치 인자 이름의 뜻:
@@ -1099,36 +1097,6 @@ mdt resolve reference param:line-01:Temperature
 
 ---
 
-### `mdt simulation run`
-
-```
-mdt simulation run [-ehvV] [--nowait] [--client-conf=path] [--loglevel=logger-level] [--poll=duration]
-                   [-t=duration] instance-id|submodel-id
-```
-
-Simulation submodel이 가리키는 시뮬레이터로 시뮬레이션을 실행한다.
-
-- 인자가 Simulation submodel의 id면 그 Submodel을 쓴다. Simulation이 아닌 Submodel이면 오류다.
-- 인자가 인스턴스 id면 그 인스턴스의 Simulation submodel을 쓴다. 여러 개면 첫 번째 것을 쓴다.
-
-| 옵션 | 인자 | 기본값 | 설명 |
-|------|------|--------|------|
-| `-e`, `--use-endpoint` | | | Submodel id 대신 Submodel 서비스 endpoint로 시뮬레이터를 호출한다 |
-| `--nowait` | | | 시작 요청만 보내고 끝날 때까지 기다리지 않는다 |
-| `--poll` | `<duration>` | `3s` | 상태 확인 주기 |
-| `-t`, `--timeout` | `<duration>` | 없음 | 제한 시간. 넘으면 시뮬레이션을 취소하고 실패로 끝난다 |
-| `-v` | | | 기다리는 동안 상태 확인마다 `.`을 출력한다 |
-
-끝나면 `Simulation completes: id=...`를 출력한다. 실패·취소·시간 초과는 종료 코드 1이다. `--nowait`이면 시작 응답
-(`Starting a simulation: id=..., status=...`)만 출력하고 끝난다.
-
-```bash
-mdt simulation run line-01 -t 5m
-mdt simulation run https://example.com/sm/Simulation -e --poll 5s
-```
-
----
-
 ## 6. 참조식과 값 리터럴 문법
 
 ### 6.1 참조식 (`element-ref`)
@@ -1197,12 +1165,3 @@ Submodel 지정:
 | 결과를 파싱하지 못함 | 기본 출력이 표·트리다. `-o json`, `-o csv`, `-o value`를 붙인다 |
 | 와일드카드가 다른 값으로 바뀜 | 셸이 `*`를 확장했다. `'param:line-01:*'`처럼 작은따옴표로 감싼다 |
 | 원인을 더 보고 싶음 | `--loglevel debug`를 붙이면 스택 트레이스와 접속 정보를 출력한다 |
-
----
-
-## 8. 부록: 등록되지 않은 명령
-
-소스에는 있지만 어떤 명령 그룹에도 등록되어 있지 않아 `mdt`로 실행할 수 없는 명령이다.
-
-- `mdt.cli.StopSimulationCommand`
-- `mdt.task.skku.SKKUSimulationTaskCommand`

@@ -333,7 +333,6 @@ function _complete_mdt_picocli() {
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} set" ];    then _picocli_mdt_picocli; return $?; fi
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} run" ];    then _picocli_mdt_picocli; return $?; fi
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} resolve" ];    then _picocli_mdt_picocli; return $?; fi
-  if [ "${COMP_LINE}" = "${COMP_WORDS[0]} simulation" ];    then _picocli_mdt_picocli; return $?; fi
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} list instances" ];    then _picocli_mdt_picocli_list; return $?; fi
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} list shells" ];    then _picocli_mdt_picocli_list; return $?; fi
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} list submodels" ];    then _picocli_mdt_picocli_list; return $?; fi
@@ -378,7 +377,6 @@ function _complete_mdt_picocli() {
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} run restful" ];    then _picocli_mdt_picocli_run; return $?; fi
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} run set" ];    then _picocli_mdt_picocli_run; return $?; fi
   if [ "${COMP_LINE}" = "${COMP_WORDS[0]} resolve reference" ];    then _picocli_mdt_picocli_resolve; return $?; fi
-  if [ "${COMP_LINE}" = "${COMP_WORDS[0]} simulation run" ];    then _picocli_mdt_picocli_simulation; return $?; fi
 
   # Find the longest sequence of subcommands and call the bash function for that subcommand.
   local cmds0=(endpoints)
@@ -392,7 +390,6 @@ function _complete_mdt_picocli() {
   local cmds8=(set)
   local cmds9=(run)
   local cmds10=(resolve)
-  local cmds11=(simulation)
   local cmds12=(list instances)
   local cmds13=(list shells)
   local cmds14=(list submodels)
@@ -437,9 +434,7 @@ function _complete_mdt_picocli() {
   local cmds53=(run restful)
   local cmds54=(run set)
   local cmds55=(resolve reference)
-  local cmds56=(simulation run)
 
-  if CompWordsContainsArray "${cmds56[@]}"; then _picocli_mdt_picocli_simulation_run; return $?; fi
   if CompWordsContainsArray "${cmds55[@]}"; then _picocli_mdt_picocli_resolve_reference; return $?; fi
   if CompWordsContainsArray "${cmds54[@]}"; then _picocli_mdt_picocli_run_set; return $?; fi
   if CompWordsContainsArray "${cmds53[@]}"; then _picocli_mdt_picocli_run_restful; return $?; fi
@@ -484,7 +479,6 @@ function _complete_mdt_picocli() {
   if CompWordsContainsArray "${cmds14[@]}"; then _picocli_mdt_picocli_list_submodels; return $?; fi
   if CompWordsContainsArray "${cmds13[@]}"; then _picocli_mdt_picocli_list_shells; return $?; fi
   if CompWordsContainsArray "${cmds12[@]}"; then _picocli_mdt_picocli_list_instances; return $?; fi
-  if CompWordsContainsArray "${cmds11[@]}"; then _picocli_mdt_picocli_simulation; return $?; fi
   if CompWordsContainsArray "${cmds10[@]}"; then _picocli_mdt_picocli_resolve; return $?; fi
   if CompWordsContainsArray "${cmds9[@]}"; then _picocli_mdt_picocli_run; return $?; fi
   if CompWordsContainsArray "${cmds8[@]}"; then _picocli_mdt_picocli_set; return $?; fi
@@ -506,7 +500,7 @@ function _picocli_mdt_picocli() {
   # Get completion data
   local curr_word=${COMP_WORDS[COMP_CWORD]}
 
-  local commands="endpoints build list remove start stop add get set run resolve simulation"
+  local commands="endpoints build list remove start stop add get set run resolve"
   local flag_opts="-h --help -V --version"
   local arg_opts=""
 
@@ -742,24 +736,6 @@ function _picocli_mdt_picocli_resolve() {
   local curr_word=${COMP_WORDS[COMP_CWORD]}
 
   local commands="reference"
-  local flag_opts="--help -h"
-  local arg_opts=""
-
-  if [[ "${curr_word}" == -* ]]; then
-    COMPREPLY=( $(compgen -W "${flag_opts} ${arg_opts}" -- "${curr_word}") )
-  else
-    local positionals=""
-    local IFS=$'\n'
-    COMPREPLY=( $(compgen -W "${commands// /$'\n'}${IFS}${positionals}" -- "${curr_word}") )
-  fi
-}
-
-# Generates completions for the options and subcommands of the `simulation` subcommand.
-function _picocli_mdt_picocli_simulation() {
-  # Get completion data
-  local curr_word=${COMP_WORDS[COMP_CWORD]}
-
-  local commands="run"
   local flag_opts="--help -h"
   local arg_opts=""
 
@@ -2665,45 +2641,6 @@ function _picocli_mdt_picocli_resolve_reference() {
       return $?
       ;;
     --loglevel)
-      return
-      ;;
-  esac
-
-  if [[ "${curr_word}" == -* ]]; then
-    COMPREPLY=( $(compgen -W "${flag_opts} ${arg_opts}" -- "${curr_word}") )
-  else
-    local positionals=""
-    local IFS=$'\n'
-    COMPREPLY=( $(compgen -W "${commands// /$'\n'}${IFS}${positionals}" -- "${curr_word}") )
-  fi
-}
-
-# Generates completions for the options and subcommands of the `run` subcommand.
-function _picocli_mdt_picocli_simulation_run() {
-  # Get completion data
-  local curr_word=${COMP_WORDS[COMP_CWORD]}
-  local prev_word=${COMP_WORDS[COMP_CWORD-1]}
-
-  local commands=""
-  local flag_opts="--use_endpoint -e --nowait -v -h --help -V --version"
-  local arg_opts="--client_conf --loglevel --timeout -t --poll"
-
-  type compopt &>/dev/null && compopt +o default
-
-  case ${prev_word} in
-    --client_conf)
-      local IFS=$'\n'
-      type compopt &>/dev/null && compopt -o filenames
-      COMPREPLY=( $( compgen -f -- "${curr_word}" ) ) # files
-      return $?
-      ;;
-    --loglevel)
-      return
-      ;;
-    --timeout|-t)
-      return
-      ;;
-    --poll)
       return
       ;;
   esac
